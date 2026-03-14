@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Member } from '../types/stokvel';
-import { currentUser } from '../data/mockData';
-import { ThemeProvider } from '../components/ThemeProvider';
+import { Member } from '../../types';
+import { currentUser } from '../../services/apiClient';
+import { ThemeProvider } from '../providers/ThemeProvider';
 
-type Screen = 
-  | 'dashboard' 
+export type Screen =
+  | 'dashboard'
   | 'shares' 
   | 'pool' 
   | 'ledger' 
@@ -12,7 +12,7 @@ type Screen =
   | 'distribution'
   | 'admin';
 
-interface AppContextType {
+export interface AppContextType {
   currentScreen: Screen;
   setCurrentScreen: (screen: Screen) => void;
   currentUser: Member;
