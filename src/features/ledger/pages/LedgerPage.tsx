@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { Search, Filter, ArrowUpRight, ArrowDownRight, ShoppingCart, Calendar } from 'lucide-react';
-import { transactions } from '../../../services/apiClient';
+import { Search, Filter, ArrowUpRight, ArrowDownRight, ShoppingCart, Calendar, Landmark } from 'lucide-react';
+import { useLedger } from '../../../hooks/useLedger';
 import { Transaction } from '../../../types';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
+import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function LedgerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | Transaction['type']>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+  const { transactions, loading } = useLedger();
+
+  useSetPageHeader('Transaction Ledger', 'Complete transaction history');
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -19,52 +24,39 @@ export function LedgerPage() {
 
   const getIcon = (type: Transaction['type']) => {
     switch (type) {
-      case 'contribution':
-        return <ArrowUpRight className="w-4 h-4" />;
-      case 'loan':
-        return <ArrowDownRight className="w-4 h-4" />;
-      case 'purchase':
-        return <ShoppingCart className="w-4 h-4" />;
-      case 'distribution':
-        return <Calendar className="w-4 h-4" />;
+      case 'contribution':  return <ArrowUpRight className="w-4 h-4" />;
+      case 'loan':          return <ArrowDownRight className="w-4 h-4" />;
+      case 'purchase':      return <ShoppingCart className="w-4 h-4" />;
+      case 'distribution':  return <Calendar className="w-4 h-4" />;
+      case 'bank_interest': return <Landmark className="w-4 h-4" />;
     }
   };
 
   const getTypeColor = (type: Transaction['type']) => {
     switch (type) {
-      case 'contribution':
-        return 'bg-chart-2/10 text-chart-2';
-      case 'loan':
-        return 'bg-accent/10 text-accent';
-      case 'purchase':
-        return 'bg-chart-3/10 text-chart-3';
-      case 'distribution':
-        return 'bg-warning/10 text-warning';
+      case 'contribution':  return 'bg-chart-2/10 text-chart-2';
+      case 'loan':          return 'bg-accent/10 text-accent';
+      case 'purchase':      return 'bg-chart-3/10 text-chart-3';
+      case 'distribution':  return 'bg-warning/10 text-warning';
+      case 'bank_interest': return 'bg-green-500/10 text-green-600';
     }
   };
 
   const getStatusColor = (status: Transaction['status']) => {
     switch (status) {
-      case 'completed':
-        return 'bg-chart-2/10 text-chart-2';
-      case 'pending':
-        return 'bg-warning/10 text-warning';
-      case 'approved':
-        return 'bg-accent/10 text-accent';
-      case 'rejected':
-        return 'bg-destructive/10 text-destructive';
+      case 'completed': return 'bg-chart-2/10 text-chart-2';
+      case 'pending': return 'bg-warning/10 text-warning';
+      case 'approved': return 'bg-accent/10 text-accent';
+      case 'rejected': return 'bg-destructive/10 text-destructive';
     }
   };
 
+  if (loading) {
+    return <div className="space-y-4 animate-pulse"><div className="h-12 bg-secondary rounded-2xl" /><div className="h-64 bg-secondary rounded-2xl" /></div>;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-1">Transaction Ledger</h1>
-        <p className="text-sm text-muted-foreground">
-          Complete transaction history
-        </p>
-      </div>
-
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
@@ -81,7 +73,7 @@ export function LedgerPage() {
           <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
+            onChange={(e) => setFilterType(e.target.value as 'all' | Transaction['type'])}
             className="pl-12 pr-8 py-3 bg-card border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer min-w-[180px]"
           >
             <option value="all">All Types</option>
@@ -89,6 +81,7 @@ export function LedgerPage() {
             <option value="loan">Loans</option>
             <option value="purchase">Purchases</option>
             <option value="distribution">Distributions</option>
+            <option value="bank_interest">Bank Interest</option>
           </select>
         </div>
       </div>
@@ -101,6 +94,9 @@ export function LedgerPage() {
             <h3 className="font-semibold">Transactions ({filteredTransactions.length})</h3>
           </div>
           <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
+            {filteredTransactions.length === 0 && (
+              <div className="p-6 text-center text-sm text-muted-foreground">No transactions found</div>
+            )}
             {filteredTransactions.map((transaction) => (
               <button
                 key={transaction.id}

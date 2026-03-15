@@ -1,21 +1,24 @@
 import { Wallet, TrendingUp, DollarSign, AlertCircle, Activity } from 'lucide-react';
-import { pool, shares } from '../../../services/apiClient';
+import { usePoolStats } from '../../../hooks/usePoolStats';
 import { formatCurrency } from '../../../utils/currency';
+import { safeDivide } from '../../../utils/financial';
+import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function PoolPage() {
-  const capitalReceivedPercent = (pool.capitalReceived / pool.capitalCommitted) * 100;
-  const liquidityPercent = (pool.liquidityAvailable / pool.totalBalance) * 100;
-  const loansPercent = (pool.totalLoansValue / pool.totalBalance) * 100;
+  const { pool, shares, loading } = usePoolStats();
+
+  useSetPageHeader('Pool Balance', 'Group financial overview and liquidity');
+
+  if (loading || !pool || !shares) {
+    return <div className="space-y-4 animate-pulse"><div className="h-48 bg-secondary rounded-3xl" /><div className="h-32 bg-secondary rounded-2xl" /></div>;
+  }
+
+  const capitalReceivedPercent = safeDivide(pool.capitalReceived, pool.capitalCommitted) * 100;
+  const liquidityPercent       = safeDivide(pool.liquidityAvailable, pool.totalBalance) * 100;
+  const loansPercent           = safeDivide(pool.totalLoansValue, pool.totalBalance) * 100;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-1">Pool Balance</h1>
-        <p className="text-sm text-muted-foreground">
-          Group financial overview and liquidity
-        </p>
-      </div>
-
       {/* Main Pool Balance */}
       <div className="bg-gradient-to-br from-accent to-accent/80 rounded-3xl p-8 text-accent-foreground">
         <div className="flex items-start justify-between mb-6">
@@ -54,7 +57,7 @@ export function PoolPage() {
           <p className="text-sm text-muted-foreground mb-1">Capital Received</p>
           <p className="text-3xl font-bold tabular-nums mb-2">{formatCurrency(pool.capitalReceived)}</p>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-chart-2 rounded-full transition-all"
               style={{ width: `${capitalReceivedPercent}%` }}
             />
@@ -81,17 +84,17 @@ export function PoolPage() {
       {/* Pool Composition */}
       <div className="bg-card rounded-2xl p-6 border border-border">
         <h3 className="font-semibold mb-6">Pool Composition</h3>
-        
+
         <div className="space-y-4">
           {/* Visual breakdown */}
           <div className="h-16 bg-secondary rounded-2xl overflow-hidden flex">
-            <div 
+            <div
               className="bg-chart-2 flex items-center justify-center text-white font-semibold transition-all"
               style={{ width: `${liquidityPercent}%` }}
             >
               {liquidityPercent > 15 && `${liquidityPercent.toFixed(0)}%`}
             </div>
-            <div 
+            <div
               className="bg-accent flex items-center justify-center text-accent-foreground font-semibold transition-all"
               style={{ width: `${loansPercent}%` }}
             >
@@ -169,7 +172,7 @@ export function PoolPage() {
           Full Transparency
         </h3>
         <p className="text-sm text-muted-foreground">
-          All pool balances are calculated in real-time based on member contributions, share purchases, 
+          All pool balances are calculated in real-time based on member contributions, share purchases,
           active loans, and investment returns. Every member has equal access to this information.
         </p>
       </div>

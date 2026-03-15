@@ -1,6 +1,7 @@
 import { TrendingUp } from 'lucide-react';
 import { ProgressCircle } from '../../../components/ui/ProgressCircle';
 import { formatCurrency, getProgressPercentage } from '../../../utils/currency';
+import { safeNumber, safeDivide } from '../../../utils/financial';
 import { Member } from '../../../types';
 
 interface OwnershipCardProps {
@@ -10,11 +11,9 @@ interface OwnershipCardProps {
 
 export function OwnershipCard({ member, perShareValue }: OwnershipCardProps) {
   const progress = getProgressPercentage(member.paidSoFar, member.totalCommitment);
-  const estimatedValue = member.sharesOwned * perShareValue;
-  const estimatedGain = estimatedValue - member.paidSoFar;
-  const gainPercentage = member.paidSoFar > 0 
-    ? ((estimatedGain / member.paidSoFar) * 100).toFixed(1)
-    : '0.0';
+  const estimatedValue = safeNumber(member.sharesOwned) * safeNumber(perShareValue);
+  const estimatedGain = estimatedValue - safeNumber(member.paidSoFar);
+  const gainPercentage = (safeDivide(estimatedGain, member.paidSoFar) * 100).toFixed(1);
 
   return (
     <div className="bg-gradient-to-br from-accent to-accent/80 rounded-3xl p-6 md:p-8 text-accent-foreground">
@@ -65,7 +64,7 @@ export function OwnershipCard({ member, perShareValue }: OwnershipCardProps) {
 
       <div className="mt-6 pt-6 border-t border-accent-foreground/20 flex items-center justify-between">
         <div>
-          <p className="text-sm opacity-90 mb-1">Estimated Value</p>
+          <p className="text-sm opacity-90 mb-1">Current Value</p>
           <p className="text-2xl font-bold tabular-nums">
             {formatCurrency(estimatedValue)}
           </p>

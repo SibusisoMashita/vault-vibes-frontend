@@ -1,11 +1,13 @@
 export interface Member {
   id: string;
   name: string;
+  phoneNumber: string;
   sharesOwned: number;
   totalCommitment: number;
   paidSoFar: number;
   remaining: number;
-  role: 'member' | 'treasurer' | 'admin';
+  role: 'member' | 'treasurer' | 'chairperson' | 'admin';
+  status: string;
 }
 
 export interface Share {
@@ -20,7 +22,7 @@ export interface Transaction {
   id: string;
   memberId: string;
   memberName: string;
-  type: 'contribution' | 'loan' | 'distribution' | 'purchase';
+  type: 'contribution' | 'loan' | 'distribution' | 'purchase' | 'bank_interest';
   amount: number;
   shares?: number;
   date: string;
@@ -33,10 +35,11 @@ export interface Loan {
   memberId: string;
   memberName: string;
   amount: number;
-  amountRepaid: number;
   interestRate: number;
-  monthlyPayment: number;
-  monthsRemaining: number;
+  interest: number;
+  totalRepayment: number;
+  amountRepaid: number;
+  remaining: number;
   status: 'active' | 'approved' | 'pending' | 'repaid';
   dateIssued: string;
 }
@@ -49,6 +52,12 @@ export interface Pool {
   activeLoans: number;
   totalLoansValue: number;
   perShareValue: number;
+  bankBalance: number;
+  outstandingLoans: number;
+  memberShareValue: number;
+  memberBorrowLimit: number;
+  poolBorrowLimit: number;
+  availableToBorrow: number;
 }
 
 export interface Group {

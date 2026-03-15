@@ -1,4 +1,5 @@
 import { formatCurrency } from '../../utils/currency';
+import { safeDivide } from '../../utils/financial';
 
 interface PoolSummaryCardProps {
   totalBalance: number;
@@ -21,7 +22,7 @@ export function PoolSummaryCard({
       <div className="space-y-4">
         <div>
           <p className="text-sm text-muted-foreground mb-1">Total Shares</p>
-          <p className="text-xl font-semibold tabular-nums">{totalBalance / perShareValue}</p>
+          <p className="text-xl font-semibold tabular-nums">{Math.round(safeDivide(totalBalance, perShareValue))}</p>
         </div>
         <div>
           <p className="text-sm text-muted-foreground mb-1">Liquidity Available</p>
