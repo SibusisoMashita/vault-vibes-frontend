@@ -24,7 +24,7 @@ export function MetricsCards({ perShareValue, estimatedPayout, poolBalance, tota
         icon={Wallet}
         iconClassName="text-chart-2"
         iconContainerClassName="bg-chart-2/10"
-        label="Estimated Payout"
+        label="Current Value"
         value={formatCurrency(estimatedPayout)}
       />
 

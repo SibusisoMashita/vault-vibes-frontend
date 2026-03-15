@@ -1,23 +1,30 @@
 import { TrendingUp, Users, ShoppingBag } from 'lucide-react';
-import { shares, members, pool } from '../../../services/apiClient';
+import { useMembers } from '../../../hooks/useMembers';
+import { usePoolStats } from '../../../hooks/usePoolStats';
 import { formatCurrency } from '../../../utils/currency';
+import { safeDivide } from '../../../utils/financial';
+import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function SharesPage() {
-  const sharesAvailablePercent = (shares.sharesAvailable / shares.totalShares) * 100;
-  const sharesSoldPercent = (shares.sharesSold / shares.totalShares) * 100;
+  const { members, loading: membersLoading } = useMembers();
+  const { pool, shares, loading: poolLoading } = usePoolStats();
+
+  const loading = membersLoading || poolLoading;
+
+  useSetPageHeader('Share Overview', 'Group ownership and distribution');
+
+  if (loading || !pool || !shares) {
+    return <div className="space-y-4 animate-pulse"><div className="h-32 bg-secondary rounded-2xl" /><div className="h-64 bg-secondary rounded-2xl" /></div>;
+  }
+
+  const sharesAvailablePercent = safeDivide(shares.sharesAvailable, shares.totalShares) * 100;
+  const sharesSoldPercent = safeDivide(shares.sharesSold, shares.totalShares) * 100;
 
   // Sort members by shares owned (descending)
   const sortedMembers = [...members].sort((a, b) => b.sharesOwned - a.sharesOwned);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-1">Share Overview</h1>
-        <p className="text-sm text-muted-foreground">
-          Group ownership and distribution
-        </p>
-      </div>
-
       {/* Share Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card rounded-2xl p-6 border border-border">
@@ -40,7 +47,9 @@ export function SharesPage() {
           </div>
           <p className="text-sm text-muted-foreground mb-1">Per Share Value</p>
           <p className="text-3xl font-bold tabular-nums">{formatCurrency(pool.perShareValue)}</p>
-          <p className="text-xs text-chart-2 mt-1">+{((pool.perShareValue / shares.pricePerShare - 1) * 100).toFixed(1)}% growth</p>
+          {shares.pricePerShare > 0 && (
+            <p className="text-xs text-chart-2 mt-1">+{((safeDivide(pool.perShareValue, shares.pricePerShare) - 1) * 100).toFixed(1)}% growth</p>
+          )}
         </div>
 
         <div className="bg-card rounded-2xl p-6 border border-border">
@@ -62,13 +71,13 @@ export function SharesPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="flex-1 h-12 bg-secondary rounded-xl overflow-hidden flex">
-              <div 
+              <div
                 className="bg-accent flex items-center justify-center text-accent-foreground text-sm font-semibold"
                 style={{ width: `${sharesSoldPercent}%` }}
               >
                 {sharesSoldPercent > 10 && `${shares.sharesSold} sold`}
               </div>
-              <div 
+              <div
                 className="bg-muted flex items-center justify-center text-muted-foreground text-sm"
                 style={{ width: `${sharesAvailablePercent}%` }}
               >
@@ -101,9 +110,9 @@ export function SharesPage() {
 
         <div className="divide-y divide-border">
           {sortedMembers.map((member, index) => {
-            const ownershipPercent = (member.sharesOwned / shares.sharesSold) * 100;
+            const ownershipPercent = safeDivide(member.sharesOwned, shares.sharesSold) * 100;
             const memberValue = member.sharesOwned * pool.perShareValue;
-            
+
             return (
               <div key={member.id} className="p-6 hover:bg-secondary/50 transition-colors">
                 <div className="flex items-start gap-4">
@@ -125,7 +134,7 @@ export function SharesPage() {
                     {/* Desktop: Progress bar and value */}
                     <div className="hidden md:block space-y-2">
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-accent rounded-full transition-all"
                           style={{ width: `${ownershipPercent}%` }}
                         />

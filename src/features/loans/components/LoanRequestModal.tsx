@@ -2,37 +2,55 @@ import { useState } from 'react';
 import { X, Check, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../../../app/providers';
-import { pool } from '../../../services/apiClient';
+import { useDashboardData } from '../../../hooks/useDashboardData';
+import { LoansService } from '../../../services/loansService';
 import { formatCurrency } from '../../../utils/currency';
 
 type Step = 'calculator' | 'preview' | 'success';
 
 export function LoanRequestModal() {
-  const { isLoanModalOpen, setIsLoanModalOpen } = useApp();
+  const { isLoanModalOpen, setIsLoanModalOpen, currentUser } = useApp();
+  const { pool } = useDashboardData();
   const [step, setStep] = useState<Step>('calculator');
   const [amount, setAmount] = useState('');
-  const [months, setMonths] = useState('12');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleClose = () => {
     setIsLoanModalOpen(false);
     setTimeout(() => {
       setStep('calculator');
       setAmount('');
-      setMonths('12');
+      setSubmitError(null);
     }, 300);
   };
 
   const numAmount = parseFloat(amount) || 0;
-  const numMonths = parseInt(months) || 12;
-  const interestRate = 8; // 8% annual rate
-  const monthlyRate = interestRate / 100 / 12;
-  const monthlyPayment = numAmount > 0 
-    ? numAmount * (monthlyRate * Math.pow(1 + monthlyRate, numMonths)) / (Math.pow(1 + monthlyRate, numMonths) - 1)
-    : 0;
-  const totalRepayment = monthlyPayment * numMonths;
-  const totalInterest = totalRepayment - numAmount;
+  const interestRate = 20;
+  const interest = numAmount * (interestRate / 100);
+  const totalRepayment = numAmount + interest;
 
-  const maxLoanAmount = pool.liquidityAvailable * 0.4; // Max 40% of liquidity
+  const liquidityAvailable = pool?.liquidityAvailable ?? 0;
+  const maxLoanAmount = pool?.availableToBorrow ?? 0;
+
+  const handleSubmit = async () => {
+    if (!currentUser.id) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await LoansService.request({
+        userId: currentUser.id,
+        amount: numAmount,
+      });
+      setStep('success');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Requested amount exceeds your borrowing limit.';
+      setSubmitError(message);
+      setStep('calculator');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -54,7 +72,7 @@ export function LoanRequestModal() {
           >
             {/* Header */}
             <div className="sticky top-0 bg-card p-6 border-b border-border flex items-center justify-between lg:rounded-t-3xl">
-              <h2 className="text-xl font-semibold">Request Loan</h2>
+              <h2 className="text-xl font-semibold">Request Borrowing</h2>
               <button
                 onClick={handleClose}
                 className="w-10 h-10 rounded-xl hover:bg-secondary flex items-center justify-center transition-colors"
@@ -67,16 +85,12 @@ export function LoanRequestModal() {
             <div className="p-6">
               {step === 'calculator' && (
                 <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
-                  {/* Left: Inputs */}
+                  {/* Left: Input */}
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm text-muted-foreground mb-2">
-                        Loan Amount
-                      </label>
+                      <label className="block text-sm text-muted-foreground mb-2">Loan Amount</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">
-                          R
-                        </span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">R</span>
                         <input
                           type="number"
                           value={amount}
@@ -89,22 +103,19 @@ export function LoanRequestModal() {
                       <p className="text-xs text-muted-foreground mt-2">
                         Maximum available: {formatCurrency(maxLoanAmount)}
                       </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-muted-foreground mb-2">
-                        Repayment Period
-                      </label>
-                      <select
-                        value={months}
-                        onChange={(e) => setMonths(e.target.value)}
-                        className="w-full px-4 py-4 text-lg font-semibold bg-secondary border border-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent"
-                      >
-                        <option value="6">6 months</option>
-                        <option value="12">12 months</option>
-                        <option value="18">18 months</option>
-                        <option value="24">24 months</option>
-                      </select>
+                      {pool !== null && maxLoanAmount <= 0 && (
+                        <p className="text-xs text-destructive mt-1">
+                          Borrowing is not available. You may not hold sufficient shares or the pool limit has been reached.
+                        </p>
+                      )}
+                      {numAmount > maxLoanAmount && maxLoanAmount > 0 && (
+                        <p className="text-xs text-destructive mt-1">
+                          Requested amount exceeds your borrowing limit.
+                        </p>
+                      )}
+                      {submitError && (
+                        <p className="text-xs text-destructive mt-1">{submitError}</p>
+                      )}
                     </div>
 
                     <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4">
@@ -113,7 +124,7 @@ export function LoanRequestModal() {
                         <div>
                           <p className="text-sm font-semibold mb-1">Interest Rate</p>
                           <p className="text-sm text-muted-foreground">
-                            {interestRate}% annual rate applied to all group loans
+                            {interestRate}% flat rate — repayment due end of month
                           </p>
                         </div>
                       </div>
@@ -128,45 +139,27 @@ export function LoanRequestModal() {
                     </h3>
 
                     {numAmount > 0 ? (
-                      <>
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Monthly Payment</p>
-                            <p className="text-3xl font-bold tabular-nums">
-                              {formatCurrency(monthlyPayment)}
-                            </p>
-                          </div>
-
-                          <div className="pt-4 border-t border-border space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Loan Amount</span>
-                              <span className="font-semibold tabular-nums">{formatCurrency(numAmount)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Total Interest</span>
-                              <span className="font-semibold tabular-nums text-warning">{formatCurrency(totalInterest)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
-                              <span className="text-muted-foreground">Total Repayment</span>
-                              <span className="font-bold tabular-nums">{formatCurrency(totalRepayment)}</span>
-                            </div>
-                          </div>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Total Repayment</p>
+                          <p className="text-3xl font-bold tabular-nums">{formatCurrency(totalRepayment)}</p>
                         </div>
 
-                        <div className="bg-card rounded-xl p-4">
-                          <p className="text-xs text-muted-foreground mb-2">Payment Schedule</p>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Payments</span>
-                              <span className="font-semibold">{numMonths} months</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Each month</span>
-                              <span className="font-semibold tabular-nums">{formatCurrency(monthlyPayment)}</span>
-                            </div>
+                        <div className="pt-4 border-t border-border space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Loan Amount</span>
+                            <span className="font-semibold tabular-nums">{formatCurrency(numAmount)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Interest ({interestRate}%)</span>
+                            <span className="font-semibold tabular-nums text-warning">{formatCurrency(interest)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+                            <span className="text-muted-foreground">Total Repayment</span>
+                            <span className="font-bold tabular-nums">{formatCurrency(totalRepayment)}</span>
                           </div>
                         </div>
-                      </>
+                      </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         <Calculator className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -185,25 +178,14 @@ export function LoanRequestModal() {
                       <p className="text-4xl font-bold tabular-nums">{formatCurrency(numAmount)}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Monthly Payment</p>
-                        <p className="text-xl font-semibold tabular-nums">{formatCurrency(monthlyPayment)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Duration</p>
-                        <p className="text-xl font-semibold">{numMonths} months</p>
-                      </div>
-                    </div>
-
                     <div className="pt-4 border-t border-border space-y-2 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Interest Rate</span>
                         <span className="font-semibold">{interestRate}%</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total Interest</span>
-                        <span className="font-semibold tabular-nums">{formatCurrency(totalInterest)}</span>
+                        <span className="text-muted-foreground">Interest</span>
+                        <span className="font-semibold tabular-nums">{formatCurrency(interest)}</span>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-border">
                         <span className="text-muted-foreground">Total Repayment</span>
@@ -214,7 +196,7 @@ export function LoanRequestModal() {
 
                   <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4">
                     <p className="text-sm">
-                      Your loan request will be reviewed by the treasurer. You'll be notified once it's approved.
+                      Your loan request will be reviewed by the treasurer. Full repayment of {formatCurrency(totalRepayment)} is due by end of the approval month.
                     </p>
                   </div>
                 </div>
@@ -228,7 +210,7 @@ export function LoanRequestModal() {
                   <div>
                     <h3 className="text-2xl font-semibold mb-2">Request Submitted!</h3>
                     <p className="text-muted-foreground">
-                      Your loan request for {formatCurrency(numAmount)} has been submitted for approval.
+                      Your borrowing request for {formatCurrency(numAmount)} has been submitted for approval.
                     </p>
                   </div>
                   <div className="bg-secondary rounded-2xl p-6 space-y-3 text-left">
@@ -237,8 +219,8 @@ export function LoanRequestModal() {
                       <span className="font-semibold tabular-nums">{formatCurrency(numAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Monthly Payment</span>
-                      <span className="font-semibold tabular-nums">{formatCurrency(monthlyPayment)}</span>
+                      <span className="text-sm text-muted-foreground">Total Repayment</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(totalRepayment)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Status</span>
@@ -269,11 +251,11 @@ export function LoanRequestModal() {
                     </button>
                   )}
                   <button
-                    onClick={() => step === 'calculator' ? setStep('preview') : setStep('success')}
-                    disabled={numAmount <= 0 || numAmount > maxLoanAmount}
+                    onClick={() => step === 'calculator' ? setStep('preview') : handleSubmit()}
+                    disabled={numAmount <= 0 || maxLoanAmount <= 0 || numAmount > maxLoanAmount || submitting}
                     className="flex-1 bg-accent text-accent-foreground py-4 rounded-2xl font-semibold hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {step === 'calculator' ? 'Continue' : 'Submit Request'}
+                    {submitting ? 'Submitting...' : step === 'calculator' ? 'Continue' : 'Submit Request'}
                   </button>
                 </div>
               )}

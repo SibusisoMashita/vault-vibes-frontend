@@ -1,13 +1,24 @@
 import { Plus, TrendingUp } from 'lucide-react';
 import { useApp } from '../../../app/providers';
-import { group, pool, transactions } from '../../../services/apiClient';
+import { useDashboardData } from '../../../hooks/useDashboardData';
 import { PoolSummaryCard, ShareSummaryCard } from '../../../components/cards';
 import { MetricsCards } from '../components/MetricsCards';
 import { RecentActivity } from '../components/RecentActivity';
+import { useLedger } from '../../../hooks/useLedger';
+import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function DashboardPage() {
   const { currentUser, setIsContributionModalOpen, setIsLoanModalOpen } = useApp();
-  const estimatedPayout = currentUser.sharesOwned * pool.perShareValue;
+  const { pool, group, loading } = useDashboardData();
+  const { transactions } = useLedger();
+
+  useSetPageHeader('Dashboard');
+
+  const estimatedPayout = pool ? currentUser.sharesOwned * pool.perShareValue : 0;
+
+  if (loading || !pool || !group) {
+    return <div className="space-y-6 animate-pulse"><div className="h-40 bg-secondary rounded-2xl" /><div className="h-32 bg-secondary rounded-2xl" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -38,7 +49,7 @@ export function DashboardPage() {
               className="flex items-center justify-center gap-2 bg-card text-foreground px-6 py-4 rounded-2xl font-semibold border border-border hover:bg-secondary transition-colors"
             >
               <TrendingUp className="w-5 h-5" />
-              Request Loan
+              Request Borrowing
             </button>
           </div>
 
@@ -64,7 +75,7 @@ export function DashboardPage() {
               className="flex items-center justify-center gap-2 w-full bg-card text-foreground px-6 py-4 rounded-2xl font-semibold border border-border hover:bg-secondary transition-colors"
             >
               <TrendingUp className="w-5 h-5" />
-              Request Loan
+              Request Borrowing
             </button>
           </div>
 

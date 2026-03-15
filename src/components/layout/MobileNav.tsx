@@ -1,14 +1,13 @@
-import { Home, PieChart, Wallet, FileText } from 'lucide-react';
-import { useApp } from '../../app/providers';
+import { Home, PieChart, Wallet, FileText, UserCircle } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 
 export function MobileNav() {
-  const { currentScreen, setCurrentScreen } = useApp();
-
   const navItems = [
-    { id: 'dashboard' as const, label: 'Home', icon: Home },
-    { id: 'shares' as const, label: 'Shares', icon: PieChart },
-    { id: 'pool' as const, label: 'Pool', icon: Wallet },
-    { id: 'ledger' as const, label: 'Ledger', icon: FileText },
+    { label: 'Home',    icon: Home,      to: '/' },
+    { label: 'Shares',  icon: PieChart,  to: '/shares' },
+    { label: 'Pool',    icon: Wallet,    to: '/pool' },
+    { label: 'Ledger',  icon: FileText,  to: '/ledger' },
+    { label: 'Account', icon: UserCircle, to: '/me' },
   ];
 
   return (
@@ -16,21 +15,20 @@ export function MobileNav() {
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentScreen === item.id;
-          
+
           return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentScreen(item.id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
-                isActive
-                  ? 'text-accent'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
+                  isActive ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
+                }`
+              }
             >
               <Icon className="w-5 h-5" />
               <span className="text-xs">{item.label}</span>
-            </button>
+            </NavLink>
           );
         })}
       </div>
