@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ReactNode } from 'react';
 import { Toaster } from '../components/ui/sonner';
 import { LoanRequestModal } from '../features/loans';
 import { ContributionModal } from '../features/pool';
 import { AuthProvider } from '../auth/AuthProvider';
 import { AuthGuard } from '../auth/AuthGuard';
+import { isGroupAdmin } from '../auth/permissions';
+import { useApp } from './context/AppContext';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { AuthCallback } from '../features/auth/pages/AuthCallback';
 import { MyAccountPage } from '../features/account/pages/MyAccountPage';
@@ -27,6 +30,7 @@ import { FEATURE_FLAGS } from '../config/featureFlags';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { AppProviders } from './providers';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { OnboardingTour } from '../features/onboarding/OnboardingTour';
 
 function ProtectedLayout() {
   return (
@@ -34,9 +38,33 @@ function ProtectedLayout() {
       <DashboardLayout />
       <ContributionModal />
       <LoanRequestModal />
+      <OnboardingTour />
       <Toaster />
     </AppProviders>
   );
+}
+
+/**
+ * Route-level guard for admin pages. Rendered inside AppProviders so it has access
+ * to AppContext. Shows a spinner while user data loads, then redirects non-admins
+ * to /dashboard.
+ */
+function AdminGuard({ children }: { children: ReactNode }) {
+  const { currentUser, isUserLoading } = useApp();
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
+      </div>
+    );
+  }
+
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -67,14 +95,14 @@ export default function App() {
             <Route path="distribution" element={<Navigate to="/distributions" replace />} />
             <Route path="invitations" element={<InvitationsPage />} />
             <Route path="me" element={<MyAccountPage />} />
-            <Route path="admin" element={<AdminPage />} />
-            <Route path="admin/loans" element={<AdminLoansPage />} />
-            <Route path="admin/members" element={<AdminMembersPage />} />
-            <Route path="admin/stokvel-config" element={<AdminStokvelConfigPage />} />
-            <Route path="admin/borrowing-config" element={<AdminBorrowingConfigPage />} />
-            <Route path="admin/roles" element={<AdminRolesPage />} />
-            <Route path="admin/bank-interest" element={<AdminBankInterestPage />} />
-            <Route path="admin/contributions" element={<AdminContributionsPage />} />
+            <Route path="admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
+            <Route path="admin/loans" element={<AdminGuard><AdminLoansPage /></AdminGuard>} />
+            <Route path="admin/members" element={<AdminGuard><AdminMembersPage /></AdminGuard>} />
+            <Route path="admin/stokvel-config" element={<AdminGuard><AdminStokvelConfigPage /></AdminGuard>} />
+            <Route path="admin/borrowing-config" element={<AdminGuard><AdminBorrowingConfigPage /></AdminGuard>} />
+            <Route path="admin/roles" element={<AdminGuard><AdminRolesPage /></AdminGuard>} />
+            <Route path="admin/bank-interest" element={<AdminGuard><AdminBankInterestPage /></AdminGuard>} />
+            <Route path="admin/contributions" element={<AdminGuard><AdminContributionsPage /></AdminGuard>} />
             {FEATURE_FLAGS.NOTIFICATIONS && <Route path="notifications" element={<NotificationsPage />} />}
             <Route path="*" element={<NotFoundPage />} />
           </Route>

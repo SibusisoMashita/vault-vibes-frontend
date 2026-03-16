@@ -1,7 +1,5 @@
-import { TrendingUp } from 'lucide-react';
-import { ProgressCircle } from '../../../components/ui/ProgressCircle';
-import { formatCurrency, getProgressPercentage } from '../../../utils/currency';
-import { safeNumber, safeDivide } from '../../../utils/financial';
+import { formatCurrency } from '../../../utils/currency';
+import { safeNumber } from '../../../utils/financial';
 import { Member } from '../../../types';
 
 interface OwnershipCardProps {
@@ -10,13 +8,31 @@ interface OwnershipCardProps {
 }
 
 export function OwnershipCard({ member, perShareValue }: OwnershipCardProps) {
-  const progress = getProgressPercentage(member.paidSoFar, member.totalCommitment);
-  const estimatedValue = safeNumber(member.sharesOwned) * safeNumber(perShareValue);
-  const estimatedGain = estimatedValue - safeNumber(member.paidSoFar);
-  const gainPercentage = (safeDivide(estimatedGain, member.paidSoFar) * 100).toFixed(1);
+  // Member Value = Shares × Share Value
+  const currentValue = safeNumber(member.sharesOwned) * safeNumber(perShareValue);
+  // Profit = Current Value − Total Contributions Paid
+  const profit = currentValue - safeNumber(member.paidSoFar);
+  const isPositive = profit > 0;
+  const isNegative = profit < 0;
+
+  const profitLabel = profit === 0
+    ? 'R0'
+    : `${isPositive ? '+' : ''}${formatCurrency(profit)}`;
+
+  const profitRingColor = isPositive
+    ? 'border-green-400'
+    : isNegative
+      ? 'border-red-400'
+      : 'border-accent-foreground/30';
+
+  const profitTextColor = isPositive
+    ? 'text-green-300'
+    : isNegative
+      ? 'text-red-300'
+      : 'text-accent-foreground/70';
 
   return (
-    <div className="bg-gradient-to-br from-accent to-accent/80 rounded-3xl p-6 md:p-8 text-accent-foreground">
+    <div data-tour="shares-card" className="bg-gradient-to-br from-accent to-accent/80 rounded-3xl p-6 md:p-8 text-accent-foreground">
       <div className="flex items-start justify-between mb-8">
         <div>
           <p className="text-sm opacity-90 mb-1">You Own</p>
@@ -27,12 +43,16 @@ export function OwnershipCard({ member, perShareValue }: OwnershipCardProps) {
             <span className="text-xl opacity-90">shares</span>
           </div>
         </div>
-        
-        <div className="relative w-20 h-20 md:w-24 md:h-24">
-          <ProgressCircle progress={progress} className="absolute inset-0" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold">{progress}%</span>
-          </div>
+
+        {/* Profit indicator — replaces progress circle */}
+        <div
+          title="Profit = Current Value − Contributions Paid"
+          className={`w-20 h-20 md:w-24 md:h-24 rounded-full border-4 ${profitRingColor} flex flex-col items-center justify-center shrink-0`}
+        >
+          <p className="text-xs opacity-75 leading-none mb-1">profit</p>
+          <p className={`text-sm font-bold tabular-nums leading-none ${profitTextColor}`}>
+            {profitLabel}
+          </p>
         </div>
       </div>
 
@@ -62,19 +82,11 @@ export function OwnershipCard({ member, perShareValue }: OwnershipCardProps) {
         </div>
       )}
 
-      <div className="mt-6 pt-6 border-t border-accent-foreground/20 flex items-center justify-between">
-        <div>
-          <p className="text-sm opacity-90 mb-1">Current Value</p>
-          <p className="text-2xl font-bold tabular-nums">
-            {formatCurrency(estimatedValue)}
-          </p>
-        </div>
-        {estimatedGain > 0 && (
-          <div className="flex items-center gap-1 text-sm bg-accent-foreground/20 px-3 py-1.5 rounded-full">
-            <TrendingUp className="w-4 h-4" />
-            <span className="font-semibold">+{gainPercentage}%</span>
-          </div>
-        )}
+      <div className="mt-6 pt-6 border-t border-accent-foreground/20">
+        <p className="text-sm opacity-90 mb-1">Current Value</p>
+        <p className="text-2xl font-bold tabular-nums">
+          {formatCurrency(currentValue)}
+        </p>
       </div>
     </div>
   );

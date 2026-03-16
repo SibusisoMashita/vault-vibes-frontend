@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LogOut } from 'lucide-react';
 import { UsersService } from '../../../services/usersService';
 import { Member } from '../../../types';
 import { formatCurrency, getProgressPercentage } from '../../../utils/currency';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { usePoolProjection } from '../../../hooks/usePoolProjection';
+import { useAuth } from '../../../auth/AuthProvider';
 
 export function MyAccountPage() {
   const [member, setMember]   = useState<Member | null>(null);
@@ -13,6 +14,7 @@ export function MyAccountPage() {
   const [error, setError]     = useState<string | null>(null);
 
   const { projection, loading: projectionLoading } = usePoolProjection();
+  const { logout } = useAuth();
 
   useSetPageHeader('My Account');
 
@@ -141,6 +143,17 @@ export function MyAccountPage() {
             </p>
           </>
         )}
+      </div>
+
+      {/* Sign Out — visible on mobile where sidebar is hidden */}
+      <div className="lg:hidden">
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Sign Out</span>
+        </button>
       </div>
     </div>
   );

@@ -21,4 +21,7 @@ export const SharesService = {
   },
 
   getMyShares: () => api.get<ShareSummaryDTO[]>('/shares/my'),
+
+  updateUserShares: (userId: string, shareUnits: number): Promise<void> =>
+    api.put<void>(`/shares/user/${userId}`, { shareUnits }),
 };

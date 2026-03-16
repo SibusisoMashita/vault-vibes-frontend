@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { ConfigService, StokvelConfig } from '../../../services/configService';
 import { formatCurrency } from '../../../utils/currency';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 export function AdminStokvelConfigPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Stokvel Setup', 'Configure share availability and pricing');
 
   const [config, setConfig]     = useState<StokvelConfig | null>(null);
@@ -29,6 +33,11 @@ export function AdminStokvelConfigPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Page-level guard: all hooks must be called before any conditional return
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

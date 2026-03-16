@@ -14,6 +14,7 @@ export function DashboardPage() {
 
   useSetPageHeader('Dashboard');
 
+  // Member Value = Shares × Share Value
   const estimatedPayout = pool ? currentUser.sharesOwned * pool.perShareValue : 0;
 
   if (loading || !pool || !group) {
@@ -64,6 +65,7 @@ export function DashboardPage() {
           {/* Action Buttons - Desktop Only */}
           <div className="hidden lg:block space-y-4">
             <button
+              data-tour="contribute-btn"
               onClick={() => setIsContributionModalOpen(true)}
               className="flex items-center justify-center gap-2 w-full bg-accent text-accent-foreground px-6 py-4 rounded-2xl font-semibold hover:bg-accent/90 transition-colors"
             >
@@ -71,6 +73,7 @@ export function DashboardPage() {
               Contribute
             </button>
             <button
+              data-tour="borrow-btn"
               onClick={() => setIsLoanModalOpen(true)}
               className="flex items-center justify-center gap-2 w-full bg-card text-foreground px-6 py-4 rounded-2xl font-semibold border border-border hover:bg-secondary transition-colors"
             >
@@ -80,6 +83,7 @@ export function DashboardPage() {
           </div>
 
           {/* Pool Summary - Desktop */}
+          <div data-tour="pool-card">
           <PoolSummaryCard
             activeLoans={pool.activeLoans}
             liquidityAvailable={pool.liquidityAvailable}
@@ -87,6 +91,7 @@ export function DashboardPage() {
             totalBalance={pool.totalBalance}
             yearEnd={group.yearEnd}
           />
+          </div>
         </div>
       </div>
 

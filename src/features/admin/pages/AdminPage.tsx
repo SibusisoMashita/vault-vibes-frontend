@@ -1,4 +1,5 @@
 import { Users, TrendingUp, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 import { useMembers } from '../../../hooks/useMembers';
 import { useLoans } from '../../../hooks/useLoans';
 import { usePoolStats } from '../../../hooks/usePoolStats';
@@ -6,8 +7,12 @@ import { LoansService } from '../../../services/loansService';
 import { formatCurrency } from '../../../utils/currency';
 import { safeDivide } from '../../../utils/financial';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
+import { LOAN_EXPOSURE_WARNING_THRESHOLD, OUTSTANDING_COMMITMENTS_WARNING_COUNT } from '../../../config/constants';
 
 export function AdminPage() {
+  const { currentUser } = useApp();
   const { members, loading: membersLoading } = useMembers();
   const { loans, loading: loansLoading, refetch: refetchLoans } = useLoans();
   const { pool, shares, loading: poolLoading } = usePoolStats();
@@ -15,6 +20,10 @@ export function AdminPage() {
   const loading = membersLoading || loansLoading || poolLoading;
 
   useSetPageHeader('Admin Dashboard', 'Treasurer controls and group oversight');
+
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   if (loading || !pool) {
     return (
@@ -41,9 +50,9 @@ export function AdminPage() {
   return (
     <div className="space-y-6">
       {/* Key Alerts */}
-      {(loanExposureRate > 50 || membersWithRemaining.length > 3) && (
+      {(loanExposureRate > LOAN_EXPOSURE_WARNING_THRESHOLD || membersWithRemaining.length > OUTSTANDING_COMMITMENTS_WARNING_COUNT) && (
         <div className="space-y-3">
-          {loanExposureRate > 50 && (
+          {loanExposureRate > LOAN_EXPOSURE_WARNING_THRESHOLD && (
             <div className="bg-warning/10 border border-warning/20 rounded-2xl p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
               <div>
@@ -55,7 +64,7 @@ export function AdminPage() {
             </div>
           )}
 
-          {membersWithRemaining.length > 3 && (
+          {membersWithRemaining.length > OUTSTANDING_COMMITMENTS_WARNING_COUNT && (
             <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />
               <div>

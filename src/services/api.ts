@@ -1,7 +1,7 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 function authToken(): string | null {
-  return localStorage.getItem('vv_id_token') ?? localStorage.getItem('accessToken');
+  return localStorage.getItem('vv_access_token') ?? localStorage.getItem('accessToken');
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -10,8 +10,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...(options.headers as Record<string, string>),
   };
 
-  // Use the Cognito ID token — it carries user claims (sub, phone_number) needed
-  // for first-login account linking on the backend. Falls back to access token.
+  // Use the Cognito access token (token_use=access). Backend rejects ID tokens.
   const token = authToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

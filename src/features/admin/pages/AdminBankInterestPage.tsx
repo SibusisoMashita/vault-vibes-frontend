@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Landmark } from 'lucide-react';
 import { LedgerService } from '../../../services/ledgerService';
 import { Transaction } from '../../../types';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 export function AdminBankInterestPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Bank Interest', 'Record interest earned on the stokvel bank account');
 
   const [amount, setAmount]           = useState('');
@@ -16,6 +20,11 @@ export function AdminBankInterestPage() {
   const [submitting, setSubmitting]   = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [recent, setRecent]           = useState<Transaction[]>([]);
+
+  // Page-level guard: all hooks must be called before any conditional return
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

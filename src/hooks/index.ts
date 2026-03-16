@@ -1,4 +1,3 @@
-export { useApi } from './useApi';
 export { useAuth } from './useAuth';
 export { useDashboardData } from './useDashboardData';
 export { useLoans } from './useLoans';

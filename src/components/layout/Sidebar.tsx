@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Home, PieChart, Wallet, FileText, TrendingUp, Calendar, Users, UserCircle, LogOut, Moon, Sun, Settings, Shield, BarChart3, ChevronDown, ChevronRight, Landmark, Bell, ClipboardCheck, BadgeDollarSign } from 'lucide-react';
+import { Home, PieChart, Wallet, FileText, TrendingUp, Calendar, Users, UserCircle, LogOut, Moon, Sun, Settings, Shield, BarChart3, ChevronDown, ChevronRight, Landmark, Bell, ClipboardCheck, BadgeDollarSign, HelpCircle } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useApp } from '../../app/providers';
 import { useAuth } from '../../auth/AuthProvider';
+import { startTour } from '../../features/onboarding/tourService';
 import { isGroupAdmin } from '../../auth/permissions';
 import { useNotifications } from '../../features/notifications/useNotifications';
 import { useLoans } from '../../hooks/useLoans';
@@ -31,16 +32,16 @@ export function Sidebar() {
   }, [isAdmin, pathname]);
 
   const mainNavItems = [
-    { label: 'Dashboard',    icon: Home,       to: '/' },
-    { label: 'Shares',       icon: PieChart,   to: '/shares' },
-    { label: 'Pool',         icon: Wallet,     to: '/pool' },
-    { label: 'Ledger',       icon: FileText,   to: '/ledger' },
-    { label: 'Borrowing',    icon: TrendingUp, to: '/loans' },
-    { label: 'Distribution', icon: Calendar,   to: '/distributions' },
+    { label: 'Dashboard',    icon: Home,       to: '/',              tourId: undefined },
+    { label: 'Shares',       icon: PieChart,   to: '/shares',        tourId: undefined },
+    { label: 'Pool',         icon: Wallet,     to: '/pool',          tourId: undefined },
+    { label: 'Ledger',       icon: FileText,   to: '/ledger',        tourId: 'nav-ledger' },
+    { label: 'Borrowing',    icon: TrendingUp, to: '/loans',         tourId: undefined },
+    { label: 'Distribution', icon: Calendar,   to: '/distributions', tourId: undefined },
     ...(FEATURE_FLAGS.NOTIFICATIONS
-      ? [{ label: 'Notifications', icon: Bell, to: '/notifications', badge: unreadCount }]
+      ? [{ label: 'Notifications', icon: Bell, to: '/notifications', badge: unreadCount, tourId: undefined }]
       : []),
-    { label: 'My Account',   icon: UserCircle, to: '/me' },
+    { label: 'My Account',   icon: UserCircle, to: '/me',            tourId: undefined },
   ];
 
   const settingsNavItems = [
@@ -79,7 +80,13 @@ export function Sidebar() {
           {mainNavItems.map((item) => {
             const Icon = item.icon;
             return (
-              <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navClassName}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={navClassName}
+                {...(item.tourId ? { 'data-tour': item.tourId } : {})}
+              >
                 <Icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
                 {item.badge != null && item.badge > 0 && (
@@ -133,6 +140,13 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border space-y-1">
+        <button
+          onClick={startTour}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span>Start Tour</span>
+        </button>
         <button
           onClick={toggleDarkMode}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"

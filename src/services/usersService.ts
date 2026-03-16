@@ -12,6 +12,8 @@ interface MemberDTO {
   totalCommitment: number;
   paidSoFar: number;
   remaining: number;
+  onboardingCompleted: boolean;
+  onboardingVersion: number;
 }
 
 function toMember(dto: MemberDTO): Member {
@@ -23,8 +25,11 @@ function toMember(dto: MemberDTO): Member {
     totalCommitment: dto.totalCommitment,
     paidSoFar: dto.paidSoFar,
     remaining: dto.remaining,
+    expectedToDate: 0,   // not available from list endpoint; computed per-user on dashboard
     role: (dto.role?.toLowerCase() as Member['role']) ?? 'member',
     status: dto.status ?? 'ACTIVE',
+    onboardingCompleted: dto.onboardingCompleted ?? false,
+    onboardingVersion: dto.onboardingVersion ?? 0,
   };
 }
 
@@ -44,4 +49,7 @@ export const UsersService = {
 
   updateRole: (id: string, role: string) =>
     api.patch<void>(`/users/${id}/role`, { role }),
+
+  completeOnboarding: (version: number) =>
+    api.patch<void>('/users/me/onboarding-complete', { version }),
 };
