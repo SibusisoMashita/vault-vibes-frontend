@@ -90,7 +90,7 @@ jobs:
             --content-type "text/html"
 
       # ─────────────────────────────────────────────
-      # CloudFront invalidation
+      # CloudFront invalidation uy
       # ─────────────────────────────────────────────
       - name: Invalidate CloudFront
         id: invalidate
