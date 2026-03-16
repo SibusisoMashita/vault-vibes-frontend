@@ -6,97 +6,123 @@ on:
       - main
       - master
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'package.json'
-      - 'vite.config.ts'
-      - '.github/workflows/deploy.yml'
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
 
-  # Allow manual trigger
   workflow_dispatch:
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     permissions:
       id-token: write
       contents: read
 
     steps:
-      # ─── Checkout code ───────────────────────────────────────────────────
-      - name: Checkout code
+
+      # ─────────────────────────────────────────────
+      # Checkout
+      # ─────────────────────────────────────────────
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # ─── Setup pnpm ──────────────────────────────────────────────────────
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      # ─── Setup Node.js ───────────────────────────────────────────────────
-      - name: Setup Node.js
+      # ─────────────────────────────────────────────
+      # Setup Node with dependency caching
+      # ─────────────────────────────────────────────
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'pnpm'
+          node-version: 18
+          cache: npm
 
-      # ─── Install dependencies ────────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # Install dependencies
+      # Faster because node_modules is cached
+      # ─────────────────────────────────────────────
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
-      # ─── Build frontend ──────────────────────────────────────────────────
+      # ─────────────────────────────────────────────
+      # Build
+      # ─────────────────────────────────────────────
       - name: Build frontend
-        run: pnpm run build
+        run: npm run build
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
-      # ─── Configure AWS credentials via OIDC ──────────────────────────────
+      # ─────────────────────────────────────────────
+      # Configure AWS credentials (OIDC)
+      # ─────────────────────────────────────────────
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          role-session-name: frontend-deployment
+          role-session-name: frontend-deploy
           aws-region: us-east-1
 
-      # ─── Upload hashed assets with long cache ────────────────────────────
-      - name: Upload static assets with long cache
+      # ─────────────────────────────────────────────
+      # Upload hashed assets (long cache)
+      # Only uploads changed files
+      # ─────────────────────────────────────────────
+      - name: Upload static assets
         run: |
           aws s3 sync ./dist s3://vaultvibes-frontend \
             --delete \
             --exclude "index.html" \
             --cache-control "public,max-age=31536000,immutable"
 
-      # ─── Upload index.html separately with no cache ──────────────────────
-      - name: Upload index.html with no cache
+      # ─────────────────────────────────────────────
+      # Upload index.html with no cache
+      # ─────────────────────────────────────────────
+      - name: Upload index.html
         run: |
           aws s3 cp ./dist/index.html s3://vaultvibes-frontend/index.html \
             --cache-control "no-cache,no-store,must-revalidate" \
             --content-type "text/html"
 
-      # ─── Invalidate CloudFront distribution ──────────────────────────────
-      - name: Invalidate CloudFront cache
+      # ─────────────────────────────────────────────
+      # CloudFront invalidation
+      # ─────────────────────────────────────────────
+      - name: Invalidate CloudFront
+        id: invalidate
         run: |
-          aws cloudfront create-invalidation \
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
+            --paths "/index.html" \
+            --query 'Invalidation.Id' \
+            --output text)
 
-      # ─── Verify deployment ──────────────────────────────────────────────
+          echo "INVALIDATION_ID=$INVALIDATION_ID" >> $GITHUB_OUTPUT
+          echo "Created invalidation: $INVALIDATION_ID"
+
+      # ─────────────────────────────────────────────
+      # Wait until invalidation completes
+      # ─────────────────────────────────────────────
+      - name: Wait for CloudFront invalidation
+        run: |
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --id ${{ steps.invalidate.outputs.INVALIDATION_ID }}
+
+      # ─────────────────────────────────────────────
+      # Verify deployment
+      # ─────────────────────────────────────────────
       - name: Verify deployment
         run: |
-          echo "✅ Deployment complete!"
-          echo ""
+          echo "Deployment completed"
           echo "Frontend URL: https://${{ secrets.CLOUDFRONT_DOMAIN_NAME }}"
-          echo "S3 Bucket: vaultvibes-frontend"
-          echo ""
-          echo "Cache headers:"
-          aws s3api head-object --bucket vaultvibes-frontend --key index.html \
-            --query '{CacheControl: CacheControl, ContentType: ContentType, LastModified: LastModified}' \
+
+          aws s3api head-object \
+            --bucket vaultvibes-frontend \
+            --key index.html \
+            --query '{CacheControl: CacheControl, LastModified: LastModified}' \
             --output table
-
-      # ─── Post deployment notification ────────────────────────────────────
-      - name: Deployment successful
-        run: |
-          echo "✅ Frontend deployed successfully to S3 and CloudFront"
-
