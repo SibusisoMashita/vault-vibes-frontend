@@ -1,5 +1,8 @@
 import { Shield, Crown, Wallet, Users } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 const MEMBER_PERMISSIONS = [
   'View group pool statistics and balances',
@@ -66,7 +69,12 @@ const ROLE_DEFINITIONS = [
 ];
 
 export function AdminRolesPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Roles', 'Role definitions and access levels');
+
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="space-y-6">

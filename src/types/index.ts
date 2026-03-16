@@ -6,8 +6,11 @@ export interface Member {
   totalCommitment: number;
   paidSoFar: number;
   remaining: number;
+  expectedToDate: number;
   role: 'member' | 'treasurer' | 'chairperson' | 'admin';
-  status: string;
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+  onboardingCompleted: boolean;
+  onboardingVersion: number;
 }
 
 export interface Share {
@@ -22,11 +25,12 @@ export interface Transaction {
   id: string;
   memberId: string;
   memberName: string;
-  type: 'contribution' | 'loan' | 'distribution' | 'purchase' | 'bank_interest';
+  type: 'CONTRIBUTION' | 'CONTRIBUTION_REVERSAL' | 'LOAN_ISSUED' | 'LOAN_REPAYMENT' | 'BANK_INTEREST';
+  entryScope: 'USER' | 'SYSTEM';
   amount: number;
   shares?: number;
   date: string;
-  status: 'completed' | 'pending' | 'approved' | 'rejected';
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
   description: string;
 }
 
@@ -40,7 +44,7 @@ export interface Loan {
   totalRepayment: number;
   amountRepaid: number;
   remaining: number;
-  status: 'active' | 'approved' | 'pending' | 'repaid';
+  status: 'pending' | 'active' | 'approved' | 'rejected' | 'repaid';
   dateIssued: string;
 }
 

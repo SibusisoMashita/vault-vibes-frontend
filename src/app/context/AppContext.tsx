@@ -6,28 +6,21 @@ import { ThemeProvider } from '../providers/ThemeProvider';
 const DEFAULT_USER: Member = {
   id: '',
   name: 'Loading...',
+  phoneNumber: '',
   sharesOwned: 0,
   totalCommitment: 0,
   paidSoFar: 0,
   remaining: 0,
+  expectedToDate: 0,
   role: 'member',
+  status: 'ACTIVE',
+  onboardingCompleted: false,
+  onboardingVersion: 0,
 };
 
-export type Screen =
-  | 'dashboard'
-  | 'shares'
-  | 'pool'
-  | 'ledger'
-  | 'loans'
-  | 'distribution'
-  | 'admin'
-  | 'account'
-  | 'invitations';
-
 export interface AppContextType {
-  currentScreen: Screen;
-  setCurrentScreen: (screen: Screen) => void;
   currentUser: Member;
+  isUserLoading: boolean;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   isContributionModalOpen: boolean;
@@ -39,23 +32,32 @@ export interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const stored = localStorage.getItem('vv_dark_mode');
+    return stored === 'true';
+  });
   const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member>(DEFAULT_USER);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, []);
 
   useEffect(() => {
     UsersService.getMe()
       .then(setCurrentUser)
       .catch(() => {
         // Keep default user if API is unavailable (e.g., during development without backend)
-      });
+      })
+      .finally(() => setIsUserLoading(false));
   }, []);
 
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
+    localStorage.setItem('vv_dark_mode', String(newMode));
     document.documentElement.classList.toggle('dark', newMode);
   };
 
@@ -63,9 +65,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <AppContext.Provider
         value={{
-          currentScreen,
-          setCurrentScreen,
           currentUser,
+          isUserLoading,
           isDarkMode,
           toggleDarkMode,
           isContributionModalOpen,

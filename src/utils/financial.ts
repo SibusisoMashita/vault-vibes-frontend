@@ -18,18 +18,6 @@ export function safeDivide(a?: number | null, b?: number | null): number {
 }
 
 /**
- * Formats a number as ZAR currency. Safe against null/undefined/NaN.
- */
-export function formatCurrency(value?: number | null): string {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(safeNumber(value));
-}
-
-/**
  * Returns a percentage string. Safe against null/undefined/NaN.
  */
 export function formatPercent(value?: number | null): string {

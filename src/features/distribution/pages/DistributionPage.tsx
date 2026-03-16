@@ -33,6 +33,7 @@ export function DistributionPage() {
 
   const { projectedPerShareValue, projectedPoolValue, monthsRemaining } = projection;
 
+  // Member Value = Shares × Share Value
   const userProjectedPayout = currentUser.sharesOwned * projectedPerShareValue;
 
   const growthPct =

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { TrendingUp, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, RefreshCw } from 'lucide-react';
 import { LoansService } from '../../../services/loansService';
 import { Loan } from '../../../types';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 type FilterStatus = 'pending' | 'active' | 'repaid' | 'rejected' | 'all';
 
@@ -16,6 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; cl
 };
 
 export function AdminLoansPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Loan Approvals', 'Review, approve and manage member borrowing requests');
 
   const [loans, setLoans]               = useState<Loan[]>([]);
@@ -33,6 +37,11 @@ export function AdminLoansPage() {
   }
 
   useEffect(() => { fetchLoans(); }, []);
+
+  // Page-level guard: all hooks must be called before any conditional return
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const filtered = loans.filter(l => filter === 'all' ? true : l.status === filter);
 

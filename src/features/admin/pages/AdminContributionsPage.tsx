@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { FileText, ImageIcon, ExternalLink, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { ContributionsService, ContributionRecord } from '../../../services/contributionsService';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 type FilterStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'ALL';
 
@@ -14,6 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; cl
 };
 
 export function AdminContributionsPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Contributions', 'Verify or reject member proof of payment submissions');
 
   const [contributions, setContributions] = useState<ContributionRecord[]>([]);
@@ -33,6 +37,11 @@ export function AdminContributionsPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Page-level guard: all hooks must be called before any conditional return
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const filtered = contributions.filter(c =>
     filter === 'ALL' ? true : c.verificationStatus === filter,

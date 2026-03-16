@@ -3,6 +3,7 @@ import { usePoolStats } from '../../../hooks/usePoolStats';
 import { formatCurrency } from '../../../utils/currency';
 import { safeDivide } from '../../../utils/financial';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { LOAN_EXPOSURE_WARNING_THRESHOLD } from '../../../config/constants';
 
 export function PoolPage() {
   const { pool, shares, loading } = usePoolStats();
@@ -152,7 +153,7 @@ export function PoolPage() {
           </div>
         </div>
 
-        {loansPercent > 50 && (
+        {loansPercent > LOAN_EXPOSURE_WARNING_THRESHOLD && (
           <div className="mt-4 p-4 bg-warning/10 border border-warning/20 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <div>

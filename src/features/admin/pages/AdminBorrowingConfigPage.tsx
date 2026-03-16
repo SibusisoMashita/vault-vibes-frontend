@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { ConfigService, BorrowingConfig } from '../../../services/configService';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
 
 export function AdminBorrowingConfigPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Borrowing Rules', 'Set the interest rate for loans');
 
   const [config, setConfig]   = useState<BorrowingConfig | null>(null);
@@ -26,6 +30,11 @@ export function AdminBorrowingConfigPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Page-level guard: all hooks must be called before any conditional return
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

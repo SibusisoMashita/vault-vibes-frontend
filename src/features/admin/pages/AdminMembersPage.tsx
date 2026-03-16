@@ -1,19 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle, XCircle, Edit2 } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { CheckCircle, XCircle, Edit2, RefreshCw, Trash2, Loader2, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { UsersService } from '../../../services/usersService';
 import { InvitationsService, Invitation } from '../../../services/invitationsService';
+import { SharesService } from '../../../services/sharesService';
 import { Member } from '../../../types';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
+import { useApp } from '../../../app/context/AppContext';
+import { isGroupAdmin } from '../../../auth/permissions';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../components/ui/alert-dialog';
 
 const ROLES = ['MEMBER', 'TREASURER', 'CHAIRPERSON', 'ADMIN'];
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING:  'bg-yellow-400/10 text-yellow-500',
-  ACCEPTED: 'bg-green-400/10 text-green-500',
-  EXPIRED:  'bg-red-400/10 text-red-500',
+  PENDING:   'bg-yellow-400/10 text-yellow-500',
+  SENT:      'bg-blue-400/10 text-blue-500',
+  ACCEPTED:  'bg-green-400/10 text-green-500',
+  EXPIRED:   'bg-red-400/10 text-red-500',
+  CANCELLED: 'bg-muted text-muted-foreground',
 };
 
+type InvitationActionType = 'resend' | 'delete';
+
 export function AdminMembersPage() {
+  const { currentUser } = useApp();
   useSetPageHeader('Members & Invitations', 'Manage members and send invitations');
 
   const [members, setMembers]         = useState<Member[]>([]);
@@ -23,14 +42,23 @@ export function AdminMembersPage() {
   const [formError, setFormError]     = useState<string | null>(null);
   const [success, setSuccess]         = useState<string | null>(null);
 
-  const phoneRef      = useRef<HTMLInputElement>(null);
-  const shareUnitsRef = useRef<HTMLInputElement>(null);
+  // Invitation action confirmation dialog state
+  const [invitationAction, setInvitationAction] = useState<{
+    type: InvitationActionType;
+    invitation: Invitation;
+  } | null>(null);
+  const [invitationActionLoading, setInvitationActionLoading] = useState<Record<string, InvitationActionType | null>>({});
+
+  const nameRef   = useRef<HTMLInputElement>(null);
+  const phoneRef  = useRef<HTMLInputElement>(null);
+  const sharesRef = useRef<HTMLInputElement>(null);
   const [role, setRole] = useState('MEMBER');
 
-  // Edit modal state
-  const [editMember, setEditMember] = useState<Member | null>(null);
-  const [editRole, setEditRole]     = useState('');
-  const [editSaving, setEditSaving] = useState(false);
+  // Edit member modal state (role + shares)
+  const [editMember, setEditMember]   = useState<Member | null>(null);
+  const [editRole, setEditRole]       = useState('');
+  const [editShares, setEditShares]   = useState('');
+  const [editSaving, setEditSaving]   = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,27 +70,29 @@ export function AdminMembersPage() {
     return () => { cancelled = true; };
   }, []);
 
+  if (!isGroupAdmin(currentUser.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // ── Invite form ──────────────────────────────────────────────────────────────
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     setSuccess(null);
-
-    const phone      = phoneRef.current?.value.trim() ?? '';
-    const shareUnits = parseFloat(shareUnitsRef.current?.value ?? '0');
-
-    if (!phone) { setFormError('Phone number is required'); return; }
-    if (!shareUnits || shareUnits <= 0) {
-      setFormError('A member must be assigned at least part of a share.');
-      return;
-    }
-
+    const name   = nameRef.current?.value.trim() ?? '';
+    const phone  = phoneRef.current?.value.trim() ?? '';
+    const shares = parseInt(sharesRef.current?.value ?? '0', 10);
+    if (!name)              { setFormError('Full name is required'); return; }
+    if (!phone)             { setFormError('Phone number is required'); return; }
+    if (!shares || shares < 1) { setFormError('Share units must be at least 1'); return; }
     setSubmitting(true);
     try {
-      const inv = await InvitationsService.create(phone, role, shareUnits);
+      const inv = await InvitationsService.create(name, phone, role, shares);
       setInvitations(prev => [inv, ...prev]);
-      setSuccess(`Invitation sent to ${phone}`);
-      if (phoneRef.current)      phoneRef.current.value = '';
-      if (shareUnitsRef.current) shareUnitsRef.current.value = '';
+      setSuccess(`Invitation sent to ${name}`);
+      if (nameRef.current)   nameRef.current.value = '';
+      if (phoneRef.current)  phoneRef.current.value = '';
+      if (sharesRef.current) sharesRef.current.value = '';
       setRole('MEMBER');
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Failed to create invitation');
@@ -71,6 +101,7 @@ export function AdminMembersPage() {
     }
   }
 
+  // ── Member actions ───────────────────────────────────────────────────────────
   async function handleToggleStatus(member: Member) {
     const newStatus = member.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     try {
@@ -79,27 +110,82 @@ export function AdminMembersPage() {
     } catch { /* ignore */ }
   }
 
-  async function handleSaveRole() {
+  async function handleSaveMember() {
     if (!editMember) return;
+    const units = parseInt(editShares, 10);
+    if (isNaN(units) || units < 0) return;
     setEditSaving(true);
     try {
-      await UsersService.updateRole(editMember.id, editRole);
+      await Promise.all([
+        UsersService.updateRole(editMember.id, editRole),
+        SharesService.updateUserShares(editMember.id, units),
+      ]);
       setMembers(prev => prev.map(m =>
-        m.id === editMember.id ? { ...m, role: editRole.toLowerCase() as Member['role'] } : m
+        m.id === editMember.id
+          ? { ...m, role: editRole.toLowerCase() as Member['role'], sharesOwned: units }
+          : m
       ));
+      toast.success(`Updated ${editMember.name}`);
       setEditMember(null);
-    } catch { /* ignore */ } finally {
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save changes');
+    } finally {
       setEditSaving(false);
     }
   }
 
+  // ── Invitation actions ───────────────────────────────────────────────────────
+  function openInvitationAction(type: InvitationActionType, invitation: Invitation) {
+    setInvitationAction({ type, invitation });
+  }
+
+  function closeInvitationAction() {
+    if (invitationAction && invitationActionLoading[invitationAction.invitation.id] === invitationAction.type) return;
+    setInvitationAction(null);
+  }
+
+  async function handleConfirmInvitationAction() {
+    if (!invitationAction) return;
+    const { type, invitation } = invitationAction;
+    setInvitationActionLoading(prev => ({ ...prev, [invitation.id]: type }));
+    try {
+      if (type === 'resend') {
+        await InvitationsService.resend(invitation.id);
+        toast.success(`Invitation resent to ${invitation.userFullName}`);
+      } else {
+        await InvitationsService.remove(invitation.id);
+        setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+        toast.success(`Invitation deleted for ${invitation.userFullName}`);
+      }
+      setInvitationAction(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : `Failed to ${type} invitation`);
+    } finally {
+      setInvitationActionLoading(prev => ({ ...prev, [invitation.id]: null }));
+    }
+  }
+
+  const invitationActionBusy = invitationAction
+    ? invitationActionLoading[invitationAction.invitation.id] === invitationAction.type
+    : false;
+
+  // Only show fully joined members in the Members table
+  const activeMembers = members.filter(m => m.status !== 'PENDING');
+
   return (
     <div className="space-y-8">
-      {/* Invite Member */}
+
+      {/* ── Invite form ─────────────────────────────────────────────────────── */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <h2 className="text-base font-semibold mb-4">Invite a new member</h2>
         <form onSubmit={handleInvite} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <input
+              ref={nameRef}
+              type="text"
+              placeholder="Full name"
+              className="px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            />
             <input
               ref={phoneRef}
               type="tel"
@@ -113,25 +199,14 @@ export function AdminMembersPage() {
             >
               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <div>
-              <input
-                ref={shareUnitsRef}
-                type="number"
-                min="0.1"
-                step="0.1"
-                placeholder="Shares (e.g. 1.5)"
-                className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
+            <input
+              ref={sharesRef}
+              type="number"
+              min="1"
+              placeholder="Share units"
+              className="px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            />
           </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">
-              How many shares should this member receive? You can assign fractional shares (e.g. 1.5).
-              A member must receive at least part of a share. These shares will be reserved when they join.
-            </p>
-          </div>
-
           <button
             type="submit"
             disabled={submitting}
@@ -144,21 +219,102 @@ export function AdminMembersPage() {
         {success   && <p className="text-green-500 text-xs mt-2">{success}</p>}
       </div>
 
-      {/* Members Table */}
+      {/* ── Invitations table (direct rows — no phone matching needed) ────────── */}
       <div className="bg-card border border-border rounded-2xl">
-        <div className="p-6 border-b border-border">
-          <h2 className="font-semibold">Members</h2>
+        <div className="p-5 border-b border-border flex items-center justify-between gap-2">
+          <div>
+            <h2 className="font-semibold">Pending Invitations</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">People who have been invited but haven't joined yet</p>
+          </div>
+          {!loading && invitations.length > 0 && (
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-yellow-400/10 text-yellow-500 tabular-nums">
+              {invitations.filter(i => i.status === 'PENDING' || i.status === 'SENT').length} active
+            </span>
+          )}
         </div>
+
         {loading ? (
           <div className="p-6 space-y-3 animate-pulse">
-            {[1,2,3].map(i => <div key={i} className="h-12 bg-secondary rounded-xl" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-14 bg-secondary rounded-xl" />)}
+          </div>
+        ) : invitations.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Send className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">No invitations sent yet.</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {members.length === 0 && (
-              <p className="p-6 text-sm text-muted-foreground">No members found.</p>
-            )}
-            {members.map(member => (
+            {invitations.map(inv => {
+              const busy = Boolean(invitationActionLoading[inv.id]);
+              return (
+                <div key={inv.id} className="px-5 py-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-yellow-400/10 flex items-center justify-center text-sm font-bold text-yellow-500 shrink-0">
+                    {inv.userFullName.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{inv.userFullName}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {inv.userPhoneNumber} · {inv.userRole} · invited {new Date(inv.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  {/* Status badge */}
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 hidden sm:inline ${STATUS_COLORS[inv.status] ?? 'bg-muted text-muted-foreground'}`}>
+                    {inv.status}
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openInvitationAction('resend', inv)}
+                      disabled={busy || (inv.status !== 'PENDING' && inv.status !== 'SENT')}
+                      title={inv.status === 'PENDING' || inv.status === 'SENT' ? 'Resend invitation SMS' : 'Only PENDING or SENT invitations can be resent'}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {invitationActionLoading[inv.id] === 'resend'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <RefreshCw className="h-3.5 w-3.5" />}
+                      <span>Resend</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openInvitationAction('delete', inv)}
+                      disabled={busy}
+                      title="Delete invitation"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {invitationActionLoading[inv.id] === 'delete'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Trash2 className="h-3.5 w-3.5" />}
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Members table (joined members only) ───────────────────────────────── */}
+      <div className="bg-card border border-border rounded-2xl">
+        <div className="p-5 border-b border-border">
+          <h2 className="font-semibold">Members</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Active and suspended members of the collective</p>
+        </div>
+        {loading ? (
+          <div className="p-6 space-y-3 animate-pulse">
+            {[1, 2, 3].map(i => <div key={i} className="h-12 bg-secondary rounded-xl" />)}
+          </div>
+        ) : activeMembers.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">No active members yet.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {activeMembers.map(member => (
               <div key={member.id} className="p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors">
                 <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold text-accent shrink-0">
                   {member.name.charAt(0).toUpperCase()}
@@ -182,9 +338,9 @@ export function AdminMembersPage() {
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => { setEditMember(member); setEditRole(member.role.toUpperCase()); }}
+                    onClick={() => { setEditMember(member); setEditRole(member.role.toUpperCase()); setEditShares(String(member.sharesOwned)); }}
                     className="p-1.5 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                    title="Edit role"
+                    title="Edit member"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -195,12 +351,11 @@ export function AdminMembersPage() {
                         ? 'text-red-500 hover:bg-red-400/10'
                         : 'text-green-500 hover:bg-green-400/10'
                     }`}
-                    title={member.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                    title={member.status === 'ACTIVE' ? 'Suspend member' : 'Activate member'}
                   >
                     {member.status === 'ACTIVE'
                       ? <XCircle className="w-4 h-4" />
-                      : <CheckCircle className="w-4 h-4" />
-                    }
+                      : <CheckCircle className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -209,53 +364,94 @@ export function AdminMembersPage() {
         )}
       </div>
 
-      {/* Invitations Table */}
-      <div className="bg-card border border-border rounded-2xl">
-        <div className="p-6 border-b border-border">
-          <h2 className="font-semibold">Invitations</h2>
-        </div>
-        {loading ? (
-          <div className="p-6 space-y-3 animate-pulse">
-            {[1,2].map(i => <div key={i} className="h-10 bg-secondary rounded-xl" />)}
-          </div>
-        ) : invitations.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No invitations yet.</p>
-        ) : (
-          <div className="divide-y divide-border">
-            {invitations.map(inv => (
-              <div key={inv.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium text-sm">{inv.phoneNumber}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {inv.role} · {new Date(inv.createdAt).toLocaleDateString()}
-                  </p>
+      {/* ── Invitation confirmation dialog ───────────────────────────────────── */}
+      <AlertDialog open={Boolean(invitationAction)} onOpenChange={open => { if (!open) closeInvitationAction(); }}>
+        <AlertDialogContent className="max-w-md rounded-2xl border-border bg-card p-0 shadow-2xl">
+          {invitationAction && (
+            <div className="p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                  invitationAction.type === 'delete'
+                    ? 'bg-destructive/10 text-destructive'
+                    : 'bg-accent/10 text-accent'
+                }`}>
+                  {invitationAction.type === 'delete'
+                    ? <Trash2 className="h-5 w-5" />
+                    : <RefreshCw className="h-5 w-5" />}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground tabular-nums hidden sm:inline">
-                    {inv.shareUnits} shares
-                  </span>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[inv.status] ?? 'bg-muted text-muted-foreground'}`}>
-                    {inv.status}
-                  </span>
-                </div>
+                <AlertDialogHeader className="gap-1 text-left">
+                  <AlertDialogTitle className="text-base">
+                    {invitationAction.type === 'delete' ? 'Delete invitation?' : 'Resend invitation?'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="leading-6">
+                    {invitationAction.type === 'delete'
+                      ? `This will permanently remove the invitation for ${invitationAction.invitation.userFullName}. This cannot be undone.`
+                      : `This will send a new temporary password to ${invitationAction.invitation.userFullName} (${invitationAction.invitation.userPhoneNumber}) via WinSMS.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Edit Role Modal */}
+              <div className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm">
+                <span className="font-medium">{invitationAction.invitation.userFullName}</span>
+                <span className="text-muted-foreground">
+                  {' · '}{invitationAction.invitation.userPhoneNumber}
+                  {' · '}{invitationAction.invitation.userRole}
+                  {' · '}<span className={`font-medium ${STATUS_COLORS[invitationAction.invitation.status] ?? ''}`}>{invitationAction.invitation.status}</span>
+                </span>
+              </div>
+
+              <AlertDialogFooter className="gap-2 sm:justify-end">
+                <AlertDialogCancel disabled={invitationActionBusy} className="rounded-xl">
+                  Cancel
+                </AlertDialogCancel>
+                <button
+                  type="button"
+                  onClick={handleConfirmInvitationAction}
+                  disabled={invitationActionBusy}
+                  className={`inline-flex h-9 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
+                    invitationAction.type === 'delete'
+                      ? 'bg-destructive hover:bg-destructive/90'
+                      : 'bg-accent hover:bg-accent/90'
+                  }`}
+                >
+                  {invitationActionBusy && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {invitationAction.type === 'delete'
+                    ? (invitationActionBusy ? 'Deleting…' : 'Delete invitation')
+                    : (invitationActionBusy ? 'Resending…' : 'Resend invitation')}
+                </button>
+              </AlertDialogFooter>
+            </div>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Edit member modal (role + shares) ────────────────────────────────── */}
       {editMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 space-y-4">
-            <h3 className="font-semibold">Edit Role — {editMember.name}</h3>
-            <select
-              value={editRole}
-              onChange={e => setEditRole(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 space-y-4 shadow-2xl">
+            <h3 className="font-semibold">Edit Member — {editMember.name}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">Role</label>
+                <select
+                  value={editRole}
+                  onChange={e => setEditRole(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">Share units</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editShares}
+                  onChange={e => setEditShares(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setEditMember(null)}
@@ -264,7 +460,7 @@ export function AdminMembersPage() {
                 Cancel
               </button>
               <button
-                onClick={handleSaveRole}
+                onClick={handleSaveMember}
                 disabled={editSaving}
                 className="flex-1 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors"
               >

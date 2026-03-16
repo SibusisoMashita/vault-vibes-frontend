@@ -19,6 +19,9 @@ export interface DashboardSummary {
   sharesSold: number;
   sharesAvailable: number;
   pricePerShare: number;
+  monthlyContribution: number;
+  cycleMonths: number;
+  expectedToDate: number;
   totalMembers: number;
   yearEnd: string;
   groupName: string;
@@ -31,13 +34,19 @@ export interface DashboardSummary {
 }
 
 export function toMember(d: DashboardSummary, id: string, name: string, role: Member['role']): Member {
+  const paidSoFar       = safeNumber(d.paidSoFar);
+  const totalCommitment = safeNumber(d.totalCommitment);
+  if (paidSoFar > totalCommitment) {
+    console.warn('DATA_INTEGRITY_WARNING: paidSoFar exceeds totalCommitment', { paidSoFar, totalCommitment });
+  }
   return {
     id,
     name,
     sharesOwned:      safeNumber(d.sharesOwned),
-    totalCommitment:  safeNumber(d.totalCommitment),
-    paidSoFar:        safeNumber(d.paidSoFar),
+    totalCommitment,
+    paidSoFar,
     remaining:        safeNumber(d.remaining),
+    expectedToDate:   safeNumber(d.expectedToDate),
     role,
   };
 }
