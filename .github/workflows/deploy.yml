@@ -1,0 +1,96 @@
+name: Deploy Frontend to S3 + CloudFront
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'vite.config.ts'
+      - '.github/workflows/deploy.yml'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      # ─── Checkout code ───────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ─── Setup Node.js ───────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # ─── Install dependencies ────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ─── Build frontend ──────────────────────────────────────────────────
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      # ─── Configure AWS credentials via OIDC ──────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: frontend-deployment
+          aws-region: us-east-1
+
+      # ─── Upload hashed assets with long cache ────────────────────────────
+      - name: Upload static assets with long cache
+        run: |
+          aws s3 sync ./dist s3://vaultvibes-frontend \
+            --delete \
+            --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable"
+
+      # ─── Upload index.html separately with no cache ──────────────────────
+      - name: Upload index.html with no cache
+        run: |
+          aws s3 cp ./dist/index.html s3://vaultvibes-frontend/index.html \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --content-type "text/html"
+
+      # ─── Invalidate CloudFront distribution ──────────────────────────────
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # ─── Verify deployment ──────────────────────────────────────────────
+      - name: Verify deployment
+        run: |
+          echo "✅ Deployment complete!"
+          echo ""
+          echo "Frontend URL: https://${{ secrets.CLOUDFRONT_DOMAIN_NAME }}"
+          echo "S3 Bucket: vaultvibes-frontend"
+          echo ""
+          echo "Cache headers:"
+          aws s3api head-object --bucket vaultvibes-frontend --key index.html \
+            --query '{CacheControl: CacheControl, ContentType: ContentType, LastModified: LastModified}' \
+            --output table
+
+      # ─── Post deployment notification ────────────────────────────────────
+      - name: Deployment successful
+        run: |
+          echo "✅ Frontend deployed successfully to S3 and CloudFront"
+
