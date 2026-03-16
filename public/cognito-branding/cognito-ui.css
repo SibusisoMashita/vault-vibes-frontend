@@ -1,0 +1,84 @@
+/* Vault Vibes AWS Cognito Hosted UI customization
+   Uses only Cognito-supported customizable selectors. */
+
+.logo-customizable {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  max-height: 72px;
+  margin: 0 auto 8px;
+}
+
+.banner-customizable {
+  padding: 32px 0 24px;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f7fb 55%, #eef4ff 100%);
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.label-customizable {
+  color: #111827;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.inputField-customizable {
+  min-height: 44px;
+  padding: 10px 12px;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.submitButton-customizable {
+  min-height: 44px;
+  padding: 12px 16px;
+  color: #ffffff;
+  background-color: #0066ff;
+  border: 1px solid #0066ff;
+  border-radius: 8px;
+  box-shadow: 0 10px 20px rgba(0, 102, 255, 0.18);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.submitButton-customizable:hover {
+  background-color: #0052cc;
+  border-color: #0052cc;
+  box-shadow: 0 12px 24px rgba(0, 82, 204, 0.2);
+}
+
+.errorMessage-customizable {
+  padding: 10px 12px;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.idpButton-customizable {
+  min-height: 44px;
+  padding: 12px 16px;
+  color: #111827;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+}
+
+.idpButton-customizable:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
