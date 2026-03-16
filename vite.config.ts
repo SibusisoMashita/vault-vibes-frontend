@@ -21,6 +21,8 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
   server: {
+    port: 5173,
+    strictPort: true, // fail fast if 5173 is occupied — prevents silent port drift that breaks Cognito redirect_uri
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
