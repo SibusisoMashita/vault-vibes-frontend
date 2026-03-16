@@ -46,6 +46,7 @@ Profit       = Member Value − Contributions Paid
 npm install
 npm run dev    # development server
 npm run build  # production build
+aws s3 sync ./dist s3://vaultvibes-frontend --delete
 ```
 
 Set `VITE_API_BASE_URL` in `.env` to point to your backend.
@@ -83,6 +84,8 @@ src/
 ## Docs
 
 Full documentation lives in the [`docs/`](./docs) folder:
+
+deploy aws s3 sync ./dist s3://vaultvibes-frontend --delete
 
 - [Overview](./docs/overview.md) - what the platform does
 - [Architecture](./docs/architecture.md) - how the code is structured
