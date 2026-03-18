@@ -93,12 +93,6 @@ jobs:
           echo "INVALIDATION_ID=$INVALIDATION_ID" >> $GITHUB_OUTPUT
           echo "Created invalidation: $INVALIDATION_ID"
 
-      - name: Wait for CloudFront invalidation
-        run: |
-          aws cloudfront wait invalidation-completed \
-            --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --id ${{ steps.invalidate.outputs.INVALIDATION_ID }}
-
       - name: Verify deployment
         run: |
           echo "DEV Frontend deployed: https://dev.vaultvibes.co.za"
