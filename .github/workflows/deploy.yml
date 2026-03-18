@@ -23,6 +23,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    environment: prod
     permissions:
       id-token: write
       contents: read
@@ -90,7 +91,7 @@ jobs:
             --content-type "text/html"
 
       # ─────────────────────────────────────────────
-      # CloudFront invalidation uy
+      # CloudFront invalidation
       # ─────────────────────────────────────────────
       - name: Invalidate CloudFront
         id: invalidate
