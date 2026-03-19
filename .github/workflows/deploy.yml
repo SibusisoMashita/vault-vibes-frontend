@@ -111,15 +111,6 @@ jobs:
           echo "Created invalidation: $INVALIDATION_ID"
 
       # ─────────────────────────────────────────────
-      # Wait until invalidation completes
-      # ─────────────────────────────────────────────
-      - name: Wait for CloudFront invalidation
-        run: |
-          aws cloudfront wait invalidation-completed \
-            --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --id ${{ steps.invalidate.outputs.INVALIDATION_ID }}
-
-      # ─────────────────────────────────────────────
       # Verify deployment
       # ─────────────────────────────────────────────
       - name: Verify deployment
