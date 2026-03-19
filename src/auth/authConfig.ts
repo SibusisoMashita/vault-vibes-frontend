@@ -1,6 +1,6 @@
 // Public SPA client — no client secret (created 2026-03-14)
-const CLIENT_ID   = '79kvqh819qcj0kojp3560jvj1';
-const DOMAIN      = 'https://auth.vaultvibes.co.za';
+const CLIENT_ID   = import.meta.env.VITE_COGNITO_CLIENT_ID as string;
+const DOMAIN      = import.meta.env.VITE_COGNITO_DOMAIN as string;
 const REDIRECT_URI = `${window.location.origin}/auth/callback`;
 const LOGOUT_URI   = `${window.location.origin}/login`;
 

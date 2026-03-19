@@ -9,7 +9,8 @@ import { isGroupAdmin } from '../auth/permissions';
 import { useApp } from './context/AppContext';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { AuthCallback } from '../features/auth/pages/AuthCallback';
-import { MyAccountPage } from '../features/account/pages/MyAccountPage';
+import { ProfilePage } from '../features/account/pages/ProfilePage';
+import { AccountSettingsPage } from '../features/account/pages/AccountSettingsPage';
 import { InvitationsPage } from '../features/invitations/pages/InvitationsPage';
 import { DashboardPage } from '../features/dashboard';
 import { SharesPage } from '../features/shares';
@@ -94,7 +95,11 @@ export default function App() {
             <Route path="distributions" element={<DistributionPage />} />
             <Route path="distribution" element={<Navigate to="/distributions" replace />} />
             <Route path="invitations" element={<InvitationsPage />} />
-            <Route path="me" element={<MyAccountPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="settings" element={<AccountSettingsPage />} />
+            {/* Redirect old /me and /account to /profile */}
+            <Route path="me" element={<Navigate to="/profile" replace />} />
+            <Route path="account" element={<Navigate to="/profile" replace />} />
             <Route path="admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
             <Route path="admin/loans" element={<AdminGuard><AdminLoansPage /></AdminGuard>} />
             <Route path="admin/members" element={<AdminGuard><AdminMembersPage /></AdminGuard>} />

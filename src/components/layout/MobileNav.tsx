@@ -1,13 +1,13 @@
-import { Home, PieChart, Wallet, FileText, UserCircle } from 'lucide-react';
+import { Home, PieChart, Wallet, FileText, TrendingUp } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export function MobileNav() {
   const navItems = [
-    { label: 'Home',    icon: Home,      to: '/' },
-    { label: 'Shares',  icon: PieChart,  to: '/shares' },
-    { label: 'Pool',    icon: Wallet,    to: '/pool' },
-    { label: 'Ledger',  icon: FileText,  to: '/ledger' },
-    { label: 'Account', icon: UserCircle, to: '/me' },
+    { label: 'Home',      icon: Home,       to: '/' },
+    { label: 'Shares',    icon: PieChart,   to: '/shares' },
+    { label: 'Pool',      icon: Wallet,     to: '/pool' },
+    { label: 'Ledger',    icon: FileText,   to: '/ledger' },
+    { label: 'Borrowing', icon: TrendingUp, to: '/loans' },
   ];
 
   return (
@@ -15,7 +15,6 @@ export function MobileNav() {
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
-
           return (
             <NavLink
               key={item.to}
