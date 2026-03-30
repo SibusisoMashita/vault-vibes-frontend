@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Edit2, RefreshCw, Trash2, Loader2, Send } from 'lucide-react';
+import { CheckCircle, XCircle, Edit2, RefreshCw, Trash2, Loader2, Send, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { UsersService } from '../../../services/usersService';
 import { InvitationsService, Invitation } from '../../../services/invitationsService';
@@ -54,6 +54,12 @@ export function AdminMembersPage() {
   const sharesRef = useRef<HTMLInputElement>(null);
   const [role, setRole] = useState('MEMBER');
 
+  // Per-member invite loading state
+  const [invitingMemberId, setInvitingMemberId] = useState<string | null>(null);
+
+  // Per-member status toggle loading state
+  const [togglingMemberId, setTogglingMemberId] = useState<string | null>(null);
+
   // Edit member modal state (role + shares)
   const [editMember, setEditMember]   = useState<Member | null>(null);
   const [editRole, setEditRole]       = useState('');
@@ -87,8 +93,12 @@ export function AdminMembersPage() {
     if (!shares || shares < 1) { setFormError('Share units must be at least 1'); return; }
     setSubmitting(true);
     try {
-      const inv = await InvitationsService.create(name, phone, role, shares);
+      const [inv, updatedMembers] = await Promise.all([
+        InvitationsService.create(name, phone, role, shares),
+        UsersService.listMembers(),
+      ]);
       setInvitations(prev => [inv, ...prev]);
+      setMembers(updatedMembers);
       setSuccess(`Invitation sent to ${name}`);
       if (nameRef.current)   nameRef.current.value = '';
       if (phoneRef.current)  phoneRef.current.value = '';
@@ -103,11 +113,17 @@ export function AdminMembersPage() {
 
   // ── Member actions ───────────────────────────────────────────────────────────
   async function handleToggleStatus(member: Member) {
+    if (togglingMemberId) return;
     const newStatus = member.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    setTogglingMemberId(member.id);
     try {
       await UsersService.updateStatus(member.id, newStatus);
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, status: newStatus } : m));
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : `Failed to ${newStatus === 'ACTIVE' ? 'activate' : 'suspend'} member`);
+    } finally {
+      setTogglingMemberId(null);
+    }
   }
 
   async function handleSaveMember() {
@@ -169,8 +185,31 @@ export function AdminMembersPage() {
     ? invitationActionLoading[invitationAction.invitation.id] === invitationAction.type
     : false;
 
-  // Only show fully joined members in the Members table
-  const activeMembers = members.filter(m => m.status !== 'PENDING');
+  // Returns the active (PENDING or SENT) invitation for a member, if any
+  function getActiveInvitation(memberId: string): Invitation | undefined {
+    return invitations.find(
+      inv => inv.userId === memberId && (inv.status === 'PENDING' || inv.status === 'SENT'),
+    );
+  }
+
+  // Invite an existing PENDING member who hasn't been invited yet.
+  // Backend detects the existing user by phone and creates a fresh invitation
+  // without re-allocating their shares.
+  async function handleInviteMember(member: Member) {
+    setInvitingMemberId(member.id);
+    try {
+      const shareUnits = Math.max(1, Math.round(member.sharesOwned));
+      const inv = await InvitationsService.create(
+        member.name, member.phoneNumber, member.role.toUpperCase(), shareUnits,
+      );
+      setInvitations(prev => [...prev.filter(i => i.userId !== member.id), inv]);
+      toast.success(`Invitation sent to ${member.name}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send invitation');
+    } finally {
+      setInvitingMemberId(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -300,66 +339,125 @@ export function AdminMembersPage() {
         )}
       </div>
 
-      {/* ── Members table (joined members only) ───────────────────────────────── */}
+      {/* ── Members table (all members — PENDING, ACTIVE, SUSPENDED) ─────────── */}
       <div className="bg-card border border-border rounded-2xl">
-        <div className="p-5 border-b border-border">
-          <h2 className="font-semibold">Members</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Active and suspended members of the collective</p>
+        <div className="p-5 border-b border-border flex items-center justify-between gap-2">
+          <div>
+            <h2 className="font-semibold">Members</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">All members of the collective</p>
+          </div>
+          {!loading && members.length > 0 && (
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-accent/10 text-accent tabular-nums">
+              {members.length} total
+            </span>
+          )}
         </div>
         {loading ? (
           <div className="p-6 space-y-3 animate-pulse">
             {[1, 2, 3].map(i => <div key={i} className="h-12 bg-secondary rounded-xl" />)}
           </div>
-        ) : activeMembers.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No active members yet.</p>
+        ) : members.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">No members yet.</p>
         ) : (
           <div className="divide-y divide-border">
-            {activeMembers.map(member => (
-              <div key={member.id} className="p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center text-sm font-bold text-accent shrink-0">
-                  {member.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{member.name}</p>
-                  <p className="text-xs text-muted-foreground">{member.phoneNumber}</p>
-                </div>
-                <p className="text-xs text-muted-foreground hidden lg:block w-16 text-right tabular-nums">
-                  {member.sharesOwned} shares
-                </p>
-                <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent capitalize hidden sm:inline">
-                  {member.role}
-                </span>
-                <span className={`text-xs px-2 py-1 rounded-full hidden md:inline ${
-                  member.status === 'ACTIVE'
-                    ? 'bg-green-400/10 text-green-500'
-                    : 'bg-red-400/10 text-red-500'
-                }`}>
-                  {member.status}
-                </span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => { setEditMember(member); setEditRole(member.role.toUpperCase()); setEditShares(String(member.sharesOwned)); }}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                    title="Edit member"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleToggleStatus(member)}
-                    className={`p-1.5 rounded-lg transition-colors ${
+            {members.map(member => {
+              const activeInv    = getActiveInvitation(member.id);
+              const isPending    = member.status === 'PENDING';
+              const isInviting   = invitingMemberId === member.id;
+              return (
+                <div key={member.id} className="p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors">
+                  {/* Avatar — yellow for uninvited PENDING, accent for everyone else */}
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    isPending ? 'bg-yellow-400/10 text-yellow-500' : 'bg-accent/20 text-accent'
+                  }`}>
+                    {member.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.phoneNumber}</p>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground hidden lg:block w-16 text-right tabular-nums">
+                    {member.sharesOwned} shares
+                  </p>
+
+                  <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent capitalize hidden sm:inline">
+                    {member.role}
+                  </span>
+
+                  {/* Status badge */}
+                  {isPending ? (
+                    activeInv ? (
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 hidden md:inline ${STATUS_COLORS[activeInv.status] ?? 'bg-muted text-muted-foreground'}`}>
+                        {activeInv.status}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full shrink-0 hidden md:inline bg-muted text-muted-foreground">
+                        Not invited
+                      </span>
+                    )
+                  ) : (
+                    <span className={`text-xs px-2 py-1 rounded-full hidden md:inline ${
                       member.status === 'ACTIVE'
-                        ? 'text-red-500 hover:bg-red-400/10'
-                        : 'text-green-500 hover:bg-green-400/10'
-                    }`}
-                    title={member.status === 'ACTIVE' ? 'Suspend member' : 'Activate member'}
-                  >
-                    {member.status === 'ACTIVE'
-                      ? <XCircle className="w-4 h-4" />
-                      : <CheckCircle className="w-4 h-4" />}
-                  </button>
+                        ? 'bg-green-400/10 text-green-500'
+                        : 'bg-red-400/10 text-red-500'
+                    }`}>
+                      {member.status}
+                    </span>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isPending ? (
+                      /* PENDING: show Invite button if not yet invited */
+                      !activeInv && (
+                        <button
+                          type="button"
+                          onClick={() => handleInviteMember(member)}
+                          disabled={isInviting}
+                          title="Send invitation SMS"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {isInviting
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <UserPlus className="h-3.5 w-3.5" />}
+                          <span>{isInviting ? 'Sending…' : 'Invite'}</span>
+                        </button>
+                      )
+                    ) : (
+                      /* ACTIVE / SUSPENDED: edit + toggle status */
+                      <>
+                        <button
+                          onClick={() => { setEditMember(member); setEditRole(member.role.toUpperCase()); setEditShares(String(member.sharesOwned)); }}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                          title="Edit member"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(member)}
+                          disabled={togglingMemberId === member.id}
+                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            member.status === 'ACTIVE'
+                              ? 'text-red-500 hover:bg-red-400/10'
+                              : 'text-green-500 hover:bg-green-400/10'
+                          }`}
+                          title={member.status === 'ACTIVE' ? 'Suspend member' : 'Activate member'}
+                        >
+                          {togglingMemberId === member.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : member.status === 'ACTIVE'
+                              ? <XCircle className="w-4 h-4" />
+                              : <CheckCircle className="w-4 h-4" />}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

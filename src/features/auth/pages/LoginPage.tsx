@@ -1,7 +1,7 @@
 import { useAuth } from '../../../auth/AuthProvider';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -17,6 +17,11 @@ export function LoginPage() {
 
         {/* Card */}
         <div className="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-8 shadow-xl">
+          {sessionExpired && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
+              Your session has expired. Please sign in again.
+            </div>
+          )}
           <h2 className="text-lg font-semibold text-white mb-1">Welcome back</h2>
           <p className="text-slate-400 text-sm mb-6">Sign in with your Vault Vibes account to continue.</p>
 

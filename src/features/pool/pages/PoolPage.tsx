@@ -6,11 +6,19 @@ import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { LOAN_EXPOSURE_WARNING_THRESHOLD } from '../../../config/constants';
 
 export function PoolPage() {
-  const { pool, shares, loading } = usePoolStats();
+  const { pool, shares, loading, error } = usePoolStats();
 
   useSetPageHeader('Pool Balance', 'Group financial overview and liquidity');
 
   if (loading || !pool || !shares) {
+    if (!loading && error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-destructive text-sm">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors">Try again</button>
+        </div>
+      );
+    }
     return <div className="space-y-4 animate-pulse"><div className="h-48 bg-secondary rounded-3xl" /><div className="h-32 bg-secondary rounded-2xl" /></div>;
   }
 

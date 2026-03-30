@@ -3,15 +3,17 @@ import { Pool, Share } from '../types';
 import { safeNumber } from '../utils/financial';
 
 export interface PoolProjection {
-  currentPoolValue:       number;
-  monthsRemaining:        number;
+  currentPoolValue:        number;
+  monthsRemaining:         number;
   monthlyPoolContribution: number;
-  contributionsRemaining: number;
-  expectedLoanInterest:   number;
-  avgMonthlyBankInterest: number;
-  projectedBankInterest:  number;
-  projectedPoolValue:     number;
-  projectedPerShareValue: number;
+  contributionsRemaining:  number;
+  expectedLoanInterest:    number;
+  avgMonthlyBankInterest:  number;
+  projectedBankInterest:   number;
+  projectedPoolValue:      number;
+  projectedPerShareValue:  number;
+  sharePrice:              number;
+  contributionMonths:      number;
 }
 
 interface PoolStatsDTO {
@@ -42,6 +44,8 @@ export const PoolService = {
       projectedBankInterest:   safeNumber(dto.projectedBankInterest),
       projectedPoolValue:      safeNumber(dto.projectedPoolValue),
       projectedPerShareValue:  safeNumber(dto.projectedPerShareValue),
+      sharePrice:              safeNumber(dto.sharePrice),
+      contributionMonths:      safeNumber(dto.contributionMonths) || 12,
     };
   },
 

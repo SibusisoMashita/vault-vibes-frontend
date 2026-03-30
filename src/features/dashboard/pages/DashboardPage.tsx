@@ -9,7 +9,7 @@ import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function DashboardPage() {
   const { currentUser, setIsContributionModalOpen, setIsLoanModalOpen } = useApp();
-  const { pool, group, loading } = useDashboardData();
+  const { pool, group, loading, error, refetch } = useDashboardData();
   const { transactions } = useLedger();
 
   useSetPageHeader('Dashboard');
@@ -18,6 +18,14 @@ export function DashboardPage() {
   const estimatedPayout = pool ? currentUser.sharesOwned * pool.perShareValue : 0;
 
   if (loading || !pool || !group) {
+    if (!loading && error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-destructive text-sm">{error}</p>
+          <button onClick={refetch} className="px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors">Try again</button>
+        </div>
+      );
+    }
     return <div className="space-y-6 animate-pulse"><div className="h-40 bg-secondary rounded-2xl" /><div className="h-32 bg-secondary rounded-2xl" /></div>;
   }
 

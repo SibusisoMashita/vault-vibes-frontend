@@ -6,10 +6,8 @@ import { NotificationBell } from '../../features/notifications/components/Notifi
 import { FEATURE_FLAGS } from '../../config/featureFlags';
 import { UserProfileMenu } from './UserProfileMenu';
 
-const GROUP_NAME = 'Vault Vibes';
-
 export function Topbar() {
-  const { currentUser } = useApp();
+  const { currentUser, currentStokvelName } = useApp();
   const navigate = useNavigate();
   const isAdmin = isGroupAdmin(currentUser.role);
 
@@ -17,9 +15,9 @@ export function Topbar() {
     <header className="lg:hidden sticky top-0 bg-card border-b border-border z-40 px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/favicon.svg" alt="Vault Vibes logo" className="w-6 h-6" />
+          <img src="/favicon-32x32.png" alt="Vault Vibes logo" className="w-6 h-6" />
           <div>
-            <h1 className="font-semibold">{GROUP_NAME}</h1>
+            <h1 className="font-semibold">{currentStokvelName}</h1>
             <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
           </div>
         </div>

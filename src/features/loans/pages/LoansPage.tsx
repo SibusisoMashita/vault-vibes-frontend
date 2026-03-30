@@ -9,10 +9,11 @@ import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function LoansPage() {
   const { setIsLoanModalOpen } = useApp();
-  const { loans, loading: loansLoading } = useLoans();
-  const { pool, loading: poolLoading } = useDashboardData();
+  const { loans, loading: loansLoading, error: loansError, refetch: refetchLoans } = useLoans();
+  const { pool, loading: poolLoading, error: poolError } = useDashboardData();
 
   const loading = loansLoading || poolLoading;
+  const error = loansError ?? poolError;
 
   useSetPageHeader('Borrowing', 'Group borrowing activity');
 
@@ -21,6 +22,14 @@ export function LoansPage() {
   );
 
   if (loading || !pool) {
+    if (!loading && error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-destructive text-sm">{error}</p>
+          <button onClick={refetchLoans} className="px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors">Try again</button>
+        </div>
+      );
+    }
     return <div className="space-y-4 animate-pulse"><div className="h-32 bg-secondary rounded-2xl" /><div className="h-64 bg-secondary rounded-2xl" /></div>;
   }
 
@@ -87,7 +96,10 @@ export function LoansPage() {
 
         <div className="divide-y divide-border">
           {loans.length === 0 && (
-            <div className="p-6 text-center text-muted-foreground text-sm">No loans found</div>
+            <div className="p-8 text-center text-muted-foreground text-sm space-y-1">
+              <p className="font-medium text-foreground">No active borrowings</p>
+              <p>Use the button above to submit a borrowing request.</p>
+            </div>
           )}
           {loans.map((loan) => {
             const progress = safeDivide(loan.amountRepaid, loan.totalRepayment) * 100;

@@ -31,10 +31,13 @@ export function DistributionPage() {
     (distributionDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  const { projectedPerShareValue, projectedPoolValue, monthsRemaining } = projection;
+  const { projectedPerShareValue, projectedPoolValue, monthsRemaining,
+          sharePrice, contributionMonths } = projection;
 
-  // Member Value = Shares × Share Value
-  const userProjectedPayout = currentUser.sharesOwned * projectedPerShareValue;
+  // Total annual commitment = shares × monthly share price × contribution months
+  const annualCommitmentPerShare = sharePrice * contributionMonths;
+  const userTotalCommitment      = currentUser.sharesOwned * annualCommitmentPerShare;
+  const userProjectedPayout      = currentUser.sharesOwned * projectedPerShareValue;
 
   const growthPct =
     shares.pricePerShare > 0
@@ -42,7 +45,11 @@ export function DistributionPage() {
       : 0;
 
   const sortedMembers = [...members]
-    .map(m => ({ ...m, projectedPayout: m.sharesOwned * projectedPerShareValue }))
+    .map(m => ({
+      ...m,
+      projectedPayout:   m.sharesOwned * projectedPerShareValue,
+      totalCommitment:   m.sharesOwned * annualCommitmentPerShare,
+    }))
     .sort((a, b) => b.projectedPayout - a.projectedPayout);
 
   return (
@@ -202,8 +209,11 @@ export function DistributionPage() {
           </div>
 
           <div className="flex items-center justify-between py-3 border-b border-border">
-            <span className="text-muted-foreground">Total Paid In</span>
-            <span className="font-semibold tabular-nums">{formatCurrency(currentUser.paidSoFar)}</span>
+            <div>
+              <span className="text-muted-foreground">Total Annual Commitment</span>
+              <p className="text-xs text-muted-foreground">{currentUser.sharesOwned} shares × {formatCurrency(sharePrice)} × {contributionMonths} months</p>
+            </div>
+            <span className="font-semibold tabular-nums">{formatCurrency(userTotalCommitment)}</span>
           </div>
 
           <div className="flex items-center justify-between py-3 border-b border-border">
@@ -214,7 +224,7 @@ export function DistributionPage() {
           <div className="flex items-center justify-between py-3 bg-chart-2/10 rounded-xl px-4">
             <span className="font-semibold text-chart-2">Projected Gain</span>
             <span className="font-bold text-xl tabular-nums text-chart-2">
-              +{formatCurrency(userProjectedPayout - currentUser.paidSoFar)}
+              {userProjectedPayout >= userTotalCommitment ? '+' : ''}{formatCurrency(userProjectedPayout - userTotalCommitment)}
             </span>
           </div>
         </div>
@@ -231,8 +241,8 @@ export function DistributionPage() {
 
         <div className="divide-y divide-border">
           {sortedMembers.map((member, index) => {
-            const gain        = member.projectedPayout - member.paidSoFar;
-            const gainPercent = safeDivide(gain, member.paidSoFar) * 100;
+            const gain        = member.projectedPayout - member.totalCommitment;
+            const gainPercent = safeDivide(gain, member.totalCommitment) * 100;
 
             return (
               <div key={member.id} className="p-6 hover:bg-secondary/50 transition-colors">
@@ -258,8 +268,8 @@ export function DistributionPage() {
 
                     <div className="flex items-center justify-between text-sm bg-secondary rounded-xl px-4 py-2">
                       <span className="text-muted-foreground">Projected gain</span>
-                      <span className="font-semibold text-chart-2 tabular-nums">
-                        +{formatCurrency(gain)} ({gainPercent > 0 ? '+' : ''}{gainPercent.toFixed(1)}%)
+                      <span className={`font-semibold tabular-nums ${gain >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                        {gain >= 0 ? '+' : ''}{formatCurrency(gain)} ({gain >= 0 ? '+' : ''}{gainPercent.toFixed(1)}%)
                       </span>
                     </div>
                   </div>

@@ -8,6 +8,7 @@ interface MemberDTO {
   email: string;
   role: string;
   status: string;
+  stokvelId?: string;
   sharesOwned: number;
   totalCommitment: number;
   paidSoFar: number;
@@ -21,6 +22,7 @@ function toMember(dto: MemberDTO): Member {
     id: dto.id,
     name: dto.fullName,
     phoneNumber: dto.phoneNumber ?? '',
+    stokvelId: dto.stokvelId,
     sharesOwned: dto.sharesOwned,
     totalCommitment: dto.totalCommitment,
     paidSoFar: dto.paidSoFar,

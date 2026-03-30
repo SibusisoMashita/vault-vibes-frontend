@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../../../app/providers';
 import { useDashboardData } from '../../../hooks/useDashboardData';
 import { LoansService } from '../../../services/loansService';
+import { ConfigService } from '../../../services/configService';
 import { formatCurrency } from '../../../utils/currency';
 
 type Step = 'calculator' | 'preview' | 'success';
@@ -16,6 +17,15 @@ export function LoanRequestModal() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [interestRate, setInterestRate] = useState(20);
+
+  useEffect(() => {
+    if (!isLoanModalOpen) return;
+    ConfigService.getBorrowing()
+      .then(cfg => setInterestRate(cfg.interestRate))
+      .catch(() => { /* keep default */ });
+  }, [isLoanModalOpen]);
+
   const handleClose = () => {
     setIsLoanModalOpen(false);
     setTimeout(() => {
@@ -26,7 +36,6 @@ export function LoanRequestModal() {
   };
 
   const numAmount = parseFloat(amount) || 0;
-  const interestRate = 20;
   const interest = numAmount * (interestRate / 100);
   const totalRepayment = numAmount + interest;
 
@@ -124,7 +133,7 @@ export function LoanRequestModal() {
                         <div>
                           <p className="text-sm font-semibold mb-1">Interest Rate</p>
                           <p className="text-sm text-muted-foreground">
-                            {interestRate}% flat rate — repayment due end of month
+                            {interestRate}% flat rate - repayment due end of month
                           </p>
                         </div>
                       </div>

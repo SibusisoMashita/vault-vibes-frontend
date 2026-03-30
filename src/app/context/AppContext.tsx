@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Member } from '../../types';
 import { UsersService } from '../../services/usersService';
+import { DashboardService } from '../../services/dashboardService';
 import { ThemeProvider } from '../providers/ThemeProvider';
 
 const DEFAULT_USER: Member = {
@@ -21,6 +22,7 @@ const DEFAULT_USER: Member = {
 export interface AppContextType {
   currentUser: Member;
   isUserLoading: boolean;
+  currentStokvelName: string;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   isContributionModalOpen: boolean;
@@ -40,16 +42,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member>(DEFAULT_USER);
   const [isUserLoading, setIsUserLoading] = useState(true);
+  const [currentStokvelName, setCurrentStokvelName] = useState('Vault Vibes');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, []);
 
   useEffect(() => {
-    UsersService.getMe()
-      .then(setCurrentUser)
+    Promise.all([
+      UsersService.getMe(),
+      DashboardService.getSummary(),
+    ])
+      .then(([user, summary]) => {
+        setCurrentUser(user);
+        if (summary.stokvelName) setCurrentStokvelName(summary.stokvelName);
+      })
       .catch(() => {
-        // Keep default user if API is unavailable (e.g., during development without backend)
+        // Keep defaults if API is unavailable (e.g., during development without backend)
       })
       .finally(() => setIsUserLoading(false));
   }, []);
@@ -67,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         value={{
           currentUser,
           isUserLoading,
+          currentStokvelName,
           isDarkMode,
           toggleDarkMode,
           isContributionModalOpen,

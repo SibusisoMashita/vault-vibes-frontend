@@ -6,14 +6,23 @@ import { safeDivide } from '../../../utils/financial';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 
 export function SharesPage() {
-  const { members, loading: membersLoading } = useMembers();
-  const { pool, shares, loading: poolLoading } = usePoolStats();
+  const { members, loading: membersLoading, error: membersError } = useMembers();
+  const { pool, shares, loading: poolLoading, error: poolError } = usePoolStats();
 
   const loading = membersLoading || poolLoading;
+  const error = membersError ?? poolError;
 
   useSetPageHeader('Share Overview', 'Group ownership and distribution');
 
   if (loading || !pool || !shares) {
+    if (!loading && error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-destructive text-sm">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors">Try again</button>
+        </div>
+      );
+    }
     return <div className="space-y-4 animate-pulse"><div className="h-32 bg-secondary rounded-2xl" /><div className="h-64 bg-secondary rounded-2xl" /></div>;
   }
 

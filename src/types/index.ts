@@ -7,6 +7,7 @@ export interface Member {
   paidSoFar: number;
   remaining: number;
   expectedToDate: number;
+  stokvelId?: string;
   role: 'member' | 'treasurer' | 'chairperson' | 'admin';
   status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
   onboardingCompleted: boolean;
@@ -64,9 +65,12 @@ export interface Pool {
   availableToBorrow: number;
 }
 
-export interface Group {
+export interface Stokvel {
   id: string;
   name: string;
   totalMembers: number;
   yearEnd: string;
 }
+
+/** @deprecated Use Stokvel */
+export type Group = Stokvel;

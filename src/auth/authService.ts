@@ -71,9 +71,6 @@ export const authService = {
     });
 
     const url = `${authConfig.authorizeUrl}?${params}`;
-    console.log('[authService] login() — redirecting to Cognito Hosted UI');
-    console.log('[authService] authorize URL:', url);
-    console.log('[authService] redirect_uri:', authConfig.redirectUri);
     window.location.href = url;
   },
 
@@ -89,11 +86,8 @@ export const authService = {
 
   /** Exchange an authorization code for tokens (PKCE) */
   async exchangeCode(code: string): Promise<TokenSet> {
-    console.log('[authService] exchangeCode() — authorization code received:', code.slice(0, 8) + '…');
-
     const verifier = sessionStorage.getItem(STORAGE_KEYS.codeVerifier);
     if (!verifier) {
-      console.error('[authService] exchangeCode() — PKCE code_verifier missing from sessionStorage!');
       throw new Error('PKCE code_verifier not found. Please restart the login flow.');
     }
 
@@ -105,25 +99,18 @@ export const authService = {
       code_verifier: verifier,
     });
 
-    console.log('[authService] exchangeCode() — sending token request to:', authConfig.tokenUrl);
-    console.log('[authService] exchangeCode() — redirect_uri in request:', authConfig.redirectUri);
-
     const response = await fetch(authConfig.tokenUrl, {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    body.toString(),
     });
 
-    console.log('[authService] exchangeCode() — token endpoint response status:', response.status);
-
     if (!response.ok) {
       const err = await response.text();
-      console.error('[authService] exchangeCode() — token exchange FAILED:', response.status, err);
       throw new Error(`Token exchange failed (${response.status}): ${err}`);
     }
 
     const data = await response.json();
-    console.log('[authService] exchangeCode() — token exchange SUCCESS, expires_in:', data.expires_in);
 
     sessionStorage.removeItem(STORAGE_KEYS.codeVerifier);
 

@@ -4,6 +4,7 @@ import { authService, CognitoUser } from './authService';
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
+  sessionExpired: boolean;
   user: CognitoUser | null;
   login: () => void | Promise<void>;
   logout: () => void;
@@ -15,12 +16,14 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading]             = useState(true);
+  const [sessionExpired, setSessionExpired]   = useState(false);
   const [user, setUser]                       = useState<CognitoUser | null>(null);
 
   async function restoreSession(): Promise<boolean> {
     if (authService.isAuthenticated()) {
       setIsAuthenticated(true);
       setUser(authService.getUser());
+      setSessionExpired(false);
       return true;
     }
 
@@ -29,8 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (tokens) {
         setIsAuthenticated(true);
         setUser(authService.getUser());
+        setSessionExpired(false);
         return true;
       }
+      // Had a refresh token but it failed — session genuinely expired
+      setSessionExpired(true);
     }
 
     setIsAuthenticated(false);
@@ -41,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     setIsAuthenticated(false);
     setUser(null);
+    setSessionExpired(false);
     authService.logout();
   }
 
@@ -57,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthenticated,
         isLoading,
+        sessionExpired,
         user,
         login:  authService.login,
         logout,
