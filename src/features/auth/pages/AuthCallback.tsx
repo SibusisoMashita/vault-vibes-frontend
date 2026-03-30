@@ -17,23 +17,16 @@ export function AuthCallback() {
     const code   = params.get('code');
     const errParam = params.get('error');
 
-    console.log('[AuthCallback] mounted — search:', window.location.search);
-
     if (errParam) {
       const desc = params.get('error_description') ?? errParam;
-      console.error('[AuthCallback] Cognito returned an error:', errParam, desc);
       setError(desc);
-      setTimeout(() => navigate('/login', { replace: true }), 3000);
       return;
     }
 
     if (!code) {
-      console.error('[AuthCallback] No authorization code found in URL.');
       navigate('/login', { replace: true });
       return;
     }
-
-    console.log('[AuthCallback] Authorization code received, starting token exchange…');
 
     authService
       .exchangeCode(code)
@@ -42,14 +35,11 @@ export function AuthCallback() {
         if (!restored) {
           throw new Error('Session restore failed after token exchange.');
         }
-        console.log('[AuthCallback] Token exchange and session restore succeeded — navigating to dashboard.');
         window.location.replace('/');
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('[AuthCallback] Token exchange failed:', msg);
         setError(msg);
-        setTimeout(() => window.location.replace('/login'), 3000);
       });
   }, [navigate, restoreSession]);
 
@@ -58,7 +48,12 @@ export function AuthCallback() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 p-6">
         <p className="text-destructive font-semibold text-center">Sign-in failed</p>
         <p className="text-muted-foreground text-sm text-center max-w-sm">{error}</p>
-        <p className="text-muted-foreground text-xs">Redirecting to login…</p>
+        <button
+          onClick={() => navigate('/login', { replace: true })}
+          className="mt-2 px-5 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors"
+        >
+          Back to login
+        </button>
       </div>
     );
   }

@@ -11,7 +11,7 @@ export function LedgerPage() {
   const [filterType, setFilterType] = useState<'all' | Transaction['type']>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  const { transactions, loading } = useLedger();
+  const { transactions, loading, error, refetch } = useLedger();
 
   useSetPageHeader('Transaction Ledger', 'Complete transaction history');
 
@@ -55,6 +55,15 @@ export function LedgerPage() {
     return <div className="space-y-4 animate-pulse"><div className="h-12 bg-secondary rounded-2xl" /><div className="h-64 bg-secondary rounded-2xl" /></div>;
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive text-sm">{error}</p>
+        <button onClick={refetch} className="px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 transition-colors">Try again</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Search and Filter */}
@@ -95,7 +104,9 @@ export function LedgerPage() {
           </div>
           <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
             {filteredTransactions.length === 0 && (
-              <div className="p-6 text-center text-sm text-muted-foreground">No transactions found</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                {filterType === 'all' && searchTerm === '' ? 'No transactions yet.' : 'No transactions match your search.'}
+              </div>
             )}
             {filteredTransactions.map((transaction) => (
               <button

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { TrendingUp, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, RefreshCw } from 'lucide-react';
+import { TrendingUp, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, RefreshCw, Loader2 } from 'lucide-react';
 import { LoansService } from '../../../services/loansService';
 import { Loan } from '../../../types';
 import { formatCurrency } from '../../../utils/currency';
@@ -8,6 +8,15 @@ import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { useApp } from '../../../app/context/AppContext';
 import { isGroupAdmin } from '../../../auth/permissions';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../components/ui/alert-dialog';
 
 type FilterStatus = 'pending' | 'active' | 'repaid' | 'rejected' | 'all';
 
@@ -27,6 +36,7 @@ export function AdminLoansPage() {
   const [filter, setFilter]             = useState<FilterStatus>('pending');
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [actionError, setActionError]   = useState<Record<string, string>>({});
+  const [confirmAction, setConfirmAction] = useState<{ type: 'reject' | 'repay'; loan: Loan } | null>(null);
 
   function fetchLoans() {
     setLoading(true);
@@ -66,6 +76,7 @@ export function AdminLoansPage() {
   async function handleReject(id: string) {
     setActionLoading(prev => ({ ...prev, [id]: true }));
     setActionError(prev => ({ ...prev, [id]: '' }));
+    setConfirmAction(null);
     try {
       const updated = await LoansService.reject(id);
       setLoans(prev => prev.map(l => l.id === id ? updated : l));
@@ -79,6 +90,7 @@ export function AdminLoansPage() {
   async function handleRepay(id: string) {
     setActionLoading(prev => ({ ...prev, [id]: true }));
     setActionError(prev => ({ ...prev, [id]: '' }));
+    setConfirmAction(null);
     try {
       const updated = await LoansService.repay(id);
       setLoans(prev => prev.map(l => l.id === id ? updated : l));
@@ -251,28 +263,28 @@ export function AdminLoansPage() {
                         disabled={busy}
                         className="flex-1 flex items-center justify-center gap-2 bg-chart-2 text-white px-4 py-3 rounded-xl font-semibold hover:bg-chart-2/90 transition-colors disabled:opacity-50 text-sm"
                       >
-                        <CheckCircle className="w-4 h-4" />
+                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                         {busy ? 'Approving…' : 'Approve'}
                       </button>
                       <button
-                        onClick={() => handleReject(loan.id)}
+                        onClick={() => setConfirmAction({ type: 'reject', loan })}
                         disabled={busy}
                         className="flex-1 flex items-center justify-center gap-2 bg-destructive/10 text-destructive px-4 py-3 rounded-xl font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-50 text-sm"
                       >
                         <XCircle className="w-4 h-4" />
-                        {busy ? 'Rejecting…' : 'Reject'}
+                        Reject
                       </button>
                     </div>
                   )}
 
                   {loan.status === 'active' && (
                     <button
-                      onClick={() => handleRepay(loan.id)}
+                      onClick={() => setConfirmAction({ type: 'repay', loan })}
                       disabled={busy}
                       className="w-full flex items-center justify-center gap-2 bg-accent text-accent-foreground px-4 py-3 rounded-xl font-semibold hover:bg-accent/90 transition-colors disabled:opacity-50 text-sm"
                     >
                       <DollarSign className="w-4 h-4" />
-                      {busy ? 'Processing…' : 'Mark as Repaid'}
+                      Mark as Repaid
                     </button>
                   )}
 
@@ -299,6 +311,45 @@ export function AdminLoansPage() {
           })}
         </ul>
       )}
+
+      {/* Confirm reject / repay dialog */}
+      <AlertDialog open={Boolean(confirmAction)} onOpenChange={open => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent className="max-w-md rounded-2xl border-border bg-card p-0 shadow-2xl">
+          {confirmAction && (
+            <div className="p-6 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                  confirmAction.type === 'reject' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
+                }`}>
+                  {confirmAction.type === 'reject' ? <XCircle className="h-5 w-5" /> : <DollarSign className="h-5 w-5" />}
+                </div>
+                <AlertDialogHeader className="gap-1 text-left">
+                  <AlertDialogTitle className="text-base">
+                    {confirmAction.type === 'reject' ? 'Reject this loan request?' : 'Mark loan as repaid?'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="leading-6">
+                    {confirmAction.type === 'reject'
+                      ? `This will permanently reject ${confirmAction.loan.memberName}'s request for ${formatCurrency(confirmAction.loan.amount)}. This cannot be undone.`
+                      : `This will mark ${confirmAction.loan.memberName}'s loan of ${formatCurrency(confirmAction.loan.amount)} as fully repaid.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+              </div>
+              <AlertDialogFooter className="gap-2 sm:justify-end">
+                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                <button
+                  type="button"
+                  onClick={() => confirmAction.type === 'reject' ? handleReject(confirmAction.loan.id) : handleRepay(confirmAction.loan.id)}
+                  className={`inline-flex h-9 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors ${
+                    confirmAction.type === 'reject' ? 'bg-destructive hover:bg-destructive/90' : 'bg-accent hover:bg-accent/90'
+                  }`}
+                >
+                  {confirmAction.type === 'reject' ? 'Reject loan' : 'Confirm repaid'}
+                </button>
+              </AlertDialogFooter>
+            </div>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

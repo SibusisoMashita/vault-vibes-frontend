@@ -22,6 +22,7 @@ export function ContributionModal() {
   const [submitting, setSubmitting]   = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [loanSettled, setLoanSettled] = useState(false);
+  const [customAmount, setCustomAmount] = useState<string>('');
 
   // Proof upload state
   const [proofFile, setProofFile]     = useState<File | null>(null);
@@ -37,7 +38,12 @@ export function ContributionModal() {
     setPreview(null);
 
     ContributionsService.preview(currentUser.id)
-      .then(data => { if (!cancelled) setPreview(data); })
+      .then(data => {
+        if (!cancelled) {
+          setPreview(data);
+          setCustomAmount(String(data.totalDue));
+        }
+      })
       .catch(e => { if (!cancelled) setError(e.message ?? 'Could not load payment details'); })
       .finally(() => { if (!cancelled) setLoading(false); });
 
@@ -58,6 +64,7 @@ export function ContributionModal() {
       setLoanSettled(false);
       setProofFile(null);
       setImagePreviewUrl(null);
+      setCustomAmount('');
     }, 300);
   };
 
@@ -87,6 +94,10 @@ export function ContributionModal() {
     if (file) handleFileSelect(file);
   };
 
+  const parsedAmount = parseFloat(customAmount);
+  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0
+    && parsedAmount <= (preview?.totalDue ?? Infinity);
+
   const handleSubmit = async () => {
     if (!currentUser.id || !preview) return;
 
@@ -103,6 +114,7 @@ export function ContributionModal() {
         new Date().toISOString().slice(0, 10),
         undefined,
         proofFile,
+        isValidAmount ? parsedAmount : undefined,
       );
       setLoanSettled(preview.repaymentAmount > 0);
       setStep('success');
@@ -235,6 +247,33 @@ export function ContributionModal() {
                     </div>
                   )}
 
+                  {/* Amount entry — pre-filled with totalDue, editable */}
+                  <div className="bg-secondary rounded-2xl p-5 space-y-2">
+                    <label className="text-sm font-semibold block">Amount you're paying</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">R</span>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        max={preview.totalDue}
+                        value={customAmount}
+                        onChange={e => setCustomAmount(e.target.value)}
+                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent tabular-nums"
+                      />
+                    </div>
+                    {customAmount && !isValidAmount && (
+                      <p className="text-xs text-destructive">
+                        Amount must be between R0.01 and {formatCurrency(preview.totalDue)}
+                      </p>
+                    )}
+                    {isValidAmount && parsedAmount < preview.totalDue && (
+                      <p className="text-xs text-muted-foreground">
+                        Partial payment — maximum due is {formatCurrency(preview.totalDue)}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="bg-accent/10 border border-accent/20 rounded-2xl p-5">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Total Payment Due</p>
@@ -340,7 +379,7 @@ export function ContributionModal() {
                   <div>
                     <h3 className="text-2xl font-semibold mb-2">Payment Submitted!</h3>
                     <p className="text-muted-foreground text-sm">
-                      Your {formatCurrency(preview?.totalDue ?? 0)} payment has been recorded.
+                      Your {formatCurrency(isValidAmount ? parsedAmount : (preview?.totalDue ?? 0))} payment has been recorded.
                     </p>
                     {proofFile && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -357,26 +396,38 @@ export function ContributionModal() {
                   )}
 
                   <div className="bg-secondary rounded-2xl p-5 space-y-3 text-sm text-left">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Contribution</span>
-                      <span className="font-semibold tabular-nums">
-                        {formatCurrency(preview?.contributionAmount ?? 0)}
-                      </span>
-                    </div>
-                    {(preview?.repaymentAmount ?? 0) > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Loan repayment</span>
-                        <span className="font-semibold tabular-nums">
-                          {formatCurrency(preview?.repaymentAmount ?? 0)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
-                      <span className="text-muted-foreground">Total paid</span>
-                      <span className="text-lg font-bold tabular-nums">
-                        {formatCurrency(preview?.totalDue ?? 0)}
-                      </span>
-                    </div>
+                    {(() => {
+                      const amountPaid = isValidAmount ? parsedAmount : (preview?.totalDue ?? 0);
+                      const fullTotal  = preview?.totalDue ?? 0;
+                      // Only show the contribution/loan breakdown when the user paid the full amount
+                      const showBreakdown = (preview?.repaymentAmount ?? 0) > 0 && amountPaid === fullTotal;
+                      return (
+                        <>
+                          {showBreakdown ? (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Contribution</span>
+                                <span className="font-semibold tabular-nums">
+                                  {formatCurrency(preview?.contributionAmount ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Loan repayment</span>
+                                <span className="font-semibold tabular-nums">
+                                  {formatCurrency(preview?.repaymentAmount ?? 0)}
+                                </span>
+                              </div>
+                            </>
+                          ) : null}
+                          <div className={`flex items-center justify-between ${showBreakdown ? 'pt-2 border-t border-border' : ''}`}>
+                            <span className="text-muted-foreground">Total paid</span>
+                            <span className="text-lg font-bold tabular-nums">
+                              {formatCurrency(amountPaid)}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -397,10 +448,10 @@ export function ContributionModal() {
               {step === 'summary' && !loading && preview && (
                 <button
                   onClick={() => { setError(null); setStep('proof'); }}
-                  disabled={!!error || preview.hasContributedThisMonth}
+                  disabled={!!error || preview.hasContributedThisMonth || !isValidAmount}
                   className="w-full bg-accent text-accent-foreground py-4 rounded-2xl font-semibold hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next — Add Proof of Payment
+                  Next - Add Proof of Payment
                 </button>
               )}
 
@@ -414,7 +465,7 @@ export function ContributionModal() {
                     {submitting
                       ? 'Submitting…'
                       : proofFile
-                        ? `Confirm Payment — ${formatCurrency(preview?.totalDue ?? 0)}`
+                        ? `Confirm Payment — ${formatCurrency(isValidAmount ? parsedAmount : (preview?.totalDue ?? 0))}`
                         : 'Attach proof to continue'
                     }
                   </button>

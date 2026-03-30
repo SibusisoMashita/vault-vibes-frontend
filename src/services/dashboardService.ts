@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Member, Pool, Share, Group } from '../types';
+import { Member, Pool, Share, Stokvel } from '../types';
 import { safeNumber } from '../utils/financial';
 
 export interface DashboardSummary {
@@ -24,7 +24,7 @@ export interface DashboardSummary {
   expectedToDate: number;
   totalMembers: number;
   yearEnd: string;
-  groupName: string;
+  stokvelName: string;
   bankBalance: number;
   outstandingLoans: number;
   memberShareValue: number;
@@ -79,14 +79,17 @@ export function toShare(d: DashboardSummary): Share {
   };
 }
 
-export function toGroup(d: DashboardSummary): Group {
+export function toStokvel(d: DashboardSummary): Stokvel {
   return {
-    id:           'g1',
-    name:         d.groupName,
+    id:           'current',
+    name:         d.stokvelName,
     totalMembers: safeNumber(d.totalMembers),
     yearEnd:      d.yearEnd,
   };
 }
+
+/** @deprecated Use toStokvel */
+export const toGroup = toStokvel;
 
 export const DashboardService = {
   getSummary: () => api.get<DashboardSummary>('/dashboard/summary'),

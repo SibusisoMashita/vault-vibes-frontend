@@ -70,13 +70,15 @@ export const ContributionsService = {
     userId: string,
     contributionDate: string,
     notes?: string,
-    proofFile: File,
+    proofFile?: File,
+    amount?: number,
   ): Promise<ContributionRecord> => {
     const formData = new FormData();
     formData.append('userId', userId);
     formData.append('contributionDate', contributionDate);
     if (notes) formData.append('notes', notes);
-    formData.append('proofFile', proofFile);
+    if (amount !== undefined) formData.append('amount', String(amount));
+    if (proofFile) formData.append('proofFile', proofFile);
     return api.postMultipart<ContributionRecord>('/contributions', formData);
   },
 

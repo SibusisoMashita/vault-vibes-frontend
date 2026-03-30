@@ -35,7 +35,8 @@ export const Permission = {
   VIEW_FINANCIAL_REPORTS: 'VIEW_FINANCIAL_REPORTS',
   AUDIT_LEDGER:           'AUDIT_LEDGER',
 
-  // ── System administration (future) ────────────────────────────────────────
+  // ── Platform administration ───────────────────────────────────────────────
+  MANAGE_STOKVELS:        'MANAGE_STOKVELS',
   SYSTEM_ADMIN:           'SYSTEM_ADMIN',
 } as const;
 
@@ -66,6 +67,7 @@ const GROUP_ADMIN_PERMISSIONS: readonly Permission[] = [
 
 const ALL_PERMISSIONS: readonly Permission[] = [
   ...GROUP_ADMIN_PERMISSIONS,
+  Permission.MANAGE_STOKVELS,
   Permission.SYSTEM_ADMIN,
 ];
 

@@ -1,0 +1,24 @@
+Prompt to create more brand assets using this logo
+
+Use this exact Vault Vibe logo mark as the base reference without redesigning the symbol. Keep the vault wheel + gear structure unchanged. Create clean brand assets that feel premium, secure, modern, and fintech-ready. Preserve the metallic silver, black, and dark charcoal palette. Focus on polished presentation, not illustration. Output should feel like a real startup brand system, not an icon concept.
+
+Create:
+1. Website hero banner mockup
+2. App splash screen
+3. Login screen concept
+4. Investor pitch slide cover
+5. Social media profile and banner assets
+6. Favicon and app icon refinements
+7. Brand board with colors, spacing, and usage examples
+
+Rules:
+- Do not alter the core geometry of the mark
+- Keep backgrounds minimal and professional
+- Avoid cartoon styling
+- Avoid excessive 3D effects
+- Prefer subtle gradients and crisp edges
+- Make the logo feel like a brand mark, not clipart
+- Produce assets on transparent, white, and dark backgrounds where relevant
+
+Optional typography direction:
+Use a modern geometric sans serif wordmark for "Vault Vibe" that pairs with the icon, with strong spacing and a premium fintech tone.

@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Home, PieChart, Wallet, FileText, TrendingUp, Calendar, Users, Settings, Shield, BarChart3, ChevronDown, ChevronRight, Landmark, Bell, ClipboardCheck, BadgeDollarSign } from 'lucide-react';
+import { Home, PieChart, Wallet, FileText, TrendingUp, Calendar, Users, Settings, Shield, BarChart3, ChevronDown, ChevronRight, Landmark, Bell, ClipboardCheck, BadgeDollarSign, Layers } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useApp } from '../../app/providers';
-import { isGroupAdmin } from '../../auth/permissions';
+import { hasPermission, isGroupAdmin, Permission } from '../../auth/permissions';
 import { useNotifications } from '../../features/notifications/useNotifications';
 import { useLoans } from '../../hooks/useLoans';
 import { ContributionsService } from '../../services/contributionsService';
 import { FEATURE_FLAGS } from '../../config/featureFlags';
 
-const GROUP_NAME = 'Vault Vibes';
-
 export function Sidebar() {
-  const { currentUser } = useApp();
+  const { currentUser, currentStokvelName } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const isAdmin = isGroupAdmin(currentUser.role);
+  const canManageStokvels = hasPermission(currentUser.role, Permission.MANAGE_STOKVELS);
   const { pathname } = useLocation();
   const { unreadCount } = useNotifications();
   const { loans } = useLoans();
@@ -48,6 +47,9 @@ export function Sidebar() {
     { label: 'Borrowing Rules',       icon: Settings,        to: '/admin/borrowing-config', badge: 0 },
     { label: 'Roles',                 icon: Shield,          to: '/admin/roles',          badge: 0 },
     { label: 'Bank Interest',         icon: Landmark,        to: '/admin/bank-interest',  badge: 0 },
+    ...(canManageStokvels
+      ? [{ label: 'Stokvels', icon: Layers, to: '/admin/stokvels', badge: 0 }]
+      : []),
   ];
 
   const navClassName = ({ isActive }: { isActive: boolean }) =>
@@ -67,13 +69,13 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 h-screen bg-card border-r border-border fixed left-0 top-0">
       <div className="px-6 py-6 border-b border-border flex items-center gap-3">
-        <img src="/favicon.svg" alt="Vault Vibes logo" className="w-8 h-8" />
-        <h1 className="text-xl font-semibold">{GROUP_NAME}</h1>
+        <img src="/favicon-32x32.png" alt="Vault Vibes logo" className="w-8 h-8" />
+        <h1 className="text-xl font-semibold">{currentStokvelName}</h1>
       </div>
 
       <nav className="flex-1 p-4 overflow-y-auto">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mb-2">
-          Vault Vibes
+          {currentStokvelName}
         </p>
         <div className="space-y-1 mb-4">
           {mainNavItems.map((item) => {

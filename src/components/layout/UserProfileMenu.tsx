@@ -17,8 +17,6 @@ import {
   SheetTitle,
 } from '../ui/sheet';
 
-const GROUP_NAME = 'Vault Vibes';
-
 const itemBase =
   'flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md transition-colors hover:bg-secondary cursor-pointer';
 
@@ -52,7 +50,7 @@ function UserAvatar({ size = 36 }: { size?: number }) {
 }
 
 function ProfileMenuItems({ onClose }: { onClose: () => void }) {
-  const { currentUser, isDarkMode, toggleDarkMode } = useApp();
+  const { currentUser, currentStokvelName, isDarkMode, toggleDarkMode } = useApp();
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -67,7 +65,7 @@ function ProfileMenuItems({ onClose }: { onClose: () => void }) {
       <div className="px-3 py-2">
         <p className="font-semibold text-sm truncate max-w-[200px]">{currentUser.name}</p>
         <p className="text-xs text-muted-foreground capitalize">{currentUser.role}</p>
-        <p className="text-xs text-muted-foreground">{GROUP_NAME}</p>
+        <p className="text-xs text-muted-foreground">{currentStokvelName}</p>
       </div>
 
       <div className="h-px bg-border my-1" />
