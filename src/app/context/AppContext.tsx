@@ -7,6 +7,7 @@ import { ThemeProvider } from '../providers/ThemeProvider';
 const DEFAULT_USER: Member = {
   id: '',
   name: 'Loading...',
+  email: '',
   phoneNumber: '',
   sharesOwned: 0,
   totalCommitment: 0,
@@ -21,6 +22,7 @@ const DEFAULT_USER: Member = {
 
 export interface AppContextType {
   currentUser: Member;
+  setCurrentUser: React.Dispatch<React.SetStateAction<Member>>;
   isUserLoading: boolean;
   currentStokvelName: string;
   isDarkMode: boolean;
@@ -75,6 +77,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       <AppContext.Provider
         value={{
           currentUser,
+          setCurrentUser,
           isUserLoading,
           currentStokvelName,
           isDarkMode,
