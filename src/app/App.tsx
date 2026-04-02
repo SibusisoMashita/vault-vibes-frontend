@@ -27,6 +27,7 @@ import { OnboardingTour } from '../features/onboarding/OnboardingTour';
 const AdminPage             = lazy(() => import('../features/admin').then(m => ({ default: m.AdminPage })));
 const AdminLoansPage        = lazy(() => import('../features/admin/pages/AdminLoansPage').then(m => ({ default: m.AdminLoansPage })));
 const AdminMembersPage      = lazy(() => import('../features/admin/pages/AdminMembersPage').then(m => ({ default: m.AdminMembersPage })));
+const AdminMemberEditPage   = lazy(() => import('../features/admin/pages/AdminMemberEditPage').then(m => ({ default: m.AdminMemberEditPage })));
 const AdminStokvelConfigPage   = lazy(() => import('../features/admin/pages/AdminStokvelConfigPage').then(m => ({ default: m.AdminStokvelConfigPage })));
 const AdminBorrowingConfigPage = lazy(() => import('../features/admin/pages/AdminBorrowingConfigPage').then(m => ({ default: m.AdminBorrowingConfigPage })));
 const AdminRolesPage        = lazy(() => import('../features/admin/pages/AdminRolesPage').then(m => ({ default: m.AdminRolesPage })));
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="admin" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminPage /></Suspense></AdminGuard>} />
             <Route path="admin/loans" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminLoansPage /></Suspense></AdminGuard>} />
             <Route path="admin/members" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminMembersPage /></Suspense></AdminGuard>} />
+            <Route path="admin/members/:memberId/edit" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminMemberEditPage /></Suspense></AdminGuard>} />
             <Route path="admin/stokvel-config" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminStokvelConfigPage /></Suspense></AdminGuard>} />
             <Route path="admin/borrowing-config" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminBorrowingConfigPage /></Suspense></AdminGuard>} />
             <Route path="admin/roles" element={<AdminGuard><Suspense fallback={<AdminFallback />}><AdminRolesPage /></Suspense></AdminGuard>} />

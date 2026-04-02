@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Edit2, RefreshCw, Trash2, Loader2, Send, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { UsersService } from '../../../services/usersService';
 import { InvitationsService, Invitation } from '../../../services/invitationsService';
-import { SharesService } from '../../../services/sharesService';
 import { Member } from '../../../types';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { useApp } from '../../../app/context/AppContext';
@@ -59,12 +58,6 @@ export function AdminMembersPage() {
 
   // Per-member status toggle loading state
   const [togglingMemberId, setTogglingMemberId] = useState<string | null>(null);
-
-  // Edit member modal state (role + shares)
-  const [editMember, setEditMember]   = useState<Member | null>(null);
-  const [editRole, setEditRole]       = useState('');
-  const [editShares, setEditShares]   = useState('');
-  const [editSaving, setEditSaving]   = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,30 +116,6 @@ export function AdminMembersPage() {
       toast.error(err instanceof Error ? err.message : `Failed to ${newStatus === 'ACTIVE' ? 'activate' : 'suspend'} member`);
     } finally {
       setTogglingMemberId(null);
-    }
-  }
-
-  async function handleSaveMember() {
-    if (!editMember) return;
-    const units = parseInt(editShares, 10);
-    if (isNaN(units) || units < 0) return;
-    setEditSaving(true);
-    try {
-      await Promise.all([
-        UsersService.updateRole(editMember.id, editRole),
-        SharesService.updateUserShares(editMember.id, units),
-      ]);
-      setMembers(prev => prev.map(m =>
-        m.id === editMember.id
-          ? { ...m, role: editRole.toLowerCase() as Member['role'], sharesOwned: units }
-          : m
-      ));
-      toast.success(`Updated ${editMember.name}`);
-      setEditMember(null);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save changes');
-    } finally {
-      setEditSaving(false);
     }
   }
 
@@ -410,32 +379,32 @@ export function AdminMembersPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
-                    {isPending ? (
-                      /* PENDING: show Invite button if not yet invited */
-                      !activeInv && (
-                        <button
-                          type="button"
-                          onClick={() => handleInviteMember(member)}
-                          disabled={isInviting}
-                          title="Send invitation SMS"
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {isInviting
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <UserPlus className="h-3.5 w-3.5" />}
-                          <span>{isInviting ? 'Sending…' : 'Invite'}</span>
-                        </button>
-                      )
-                    ) : (
-                      /* ACTIVE / SUSPENDED: edit + toggle status */
+                    <Link
+                      to={`/admin/members/${member.id}/edit`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
+                      title="Edit member"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      <span>Edit</span>
+                    </Link>
+
+                    {isPending && !activeInv && (
+                      <button
+                        type="button"
+                        onClick={() => handleInviteMember(member)}
+                        disabled={isInviting}
+                        title="Send invitation SMS"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {isInviting
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <UserPlus className="h-3.5 w-3.5" />}
+                        <span>{isInviting ? 'Sending…' : 'Invite'}</span>
+                      </button>
+                    )}
+
+                    {!isPending && (
                       <>
-                        <button
-                          onClick={() => { setEditMember(member); setEditRole(member.role.toUpperCase()); setEditShares(String(member.sharesOwned)); }}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                          title="Edit member"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
                         <button
                           onClick={() => handleToggleStatus(member)}
                           disabled={togglingMemberId === member.id}
@@ -523,51 +492,6 @@ export function AdminMembersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Edit member modal (role + shares) ────────────────────────────────── */}
-      {editMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm mx-4 space-y-4 shadow-2xl">
-            <h3 className="font-semibold">Edit Member — {editMember.name}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">Role</label>
-                <select
-                  value={editRole}
-                  onChange={e => setEditRole(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                >
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">Share units</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editShares}
-                  onChange={e => setEditShares(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setEditMember(null)}
-                className="flex-1 px-4 py-2 rounded-xl border border-border text-sm font-semibold hover:bg-secondary transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveMember}
-                disabled={editSaving}
-                className="flex-1 px-4 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-accent/90 disabled:opacity-50 transition-colors"
-              >
-                {editSaving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
