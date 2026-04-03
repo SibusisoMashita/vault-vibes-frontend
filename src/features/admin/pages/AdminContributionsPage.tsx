@@ -40,7 +40,7 @@ export function AdminContributionsPage() {
 
   // Page-level guard: all hooks must be called before any conditional return
   if (!isGroupAdmin(currentUser.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   const filtered = contributions.filter(c =>

@@ -91,7 +91,7 @@ export function ProfilePage() {
       <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Contribution Progress</h3>
-          <Link to="/distributions" className="flex items-center gap-1 text-xs text-accent hover:underline">
+          <Link to="/app/distributions" className="flex items-center gap-1 text-xs text-accent hover:underline">
             View projected payout <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

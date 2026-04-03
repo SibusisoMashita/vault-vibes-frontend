@@ -50,7 +50,7 @@ export function AdminLoansPage() {
 
   // Page-level guard: all hooks must be called before any conditional return
   if (!isGroupAdmin(currentUser.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   const filtered = loans.filter(l => filter === 'all' ? true : l.status === filter);

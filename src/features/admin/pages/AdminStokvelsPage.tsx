@@ -32,7 +32,7 @@ export function AdminStokvelsPage() {
   const [editDesc, setEditDesc]     = useState('');
 
   if (!hasPermission(currentUser.role, Permission.MANAGE_STOKVELS)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   useEffect(() => {

@@ -113,7 +113,7 @@ export function NotificationBell() {
           {/* Footer */}
           <div className="border-t border-border px-4 py-2">
             <button
-              onClick={() => { setOpen(false); navigate('/notifications'); }}
+              onClick={() => { setOpen(false); navigate('/app/notifications'); }}
               className="w-full text-xs text-center text-accent hover:underline py-1"
             >
               View all notifications

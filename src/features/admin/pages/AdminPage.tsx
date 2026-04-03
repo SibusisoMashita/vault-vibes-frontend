@@ -22,7 +22,7 @@ export function AdminPage() {
   useSetPageHeader('Admin Dashboard', 'Treasurer controls and group oversight');
 
   if (!isGroupAdmin(currentUser.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   if (loading || !pool) {

@@ -97,7 +97,7 @@ export function MyAccountPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Contribution Progress</h3>
           <Link
-            to="/distributions"
+            to="/app/distributions"
             className="flex items-center gap-1 text-xs text-accent hover:underline"
           >
             View projected payout

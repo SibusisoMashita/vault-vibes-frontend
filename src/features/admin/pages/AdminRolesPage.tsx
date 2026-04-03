@@ -73,7 +73,7 @@ export function AdminRolesPage() {
   useSetPageHeader('Roles', 'Role definitions and access levels');
 
   if (!isGroupAdmin(currentUser.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   return (

@@ -32,15 +32,15 @@ export function Topbar() {
   }, [isAdmin]);
 
   const settingsNavItems = [
-    { label: 'Members',         icon: Users,           to: '/admin/members',          badge: 0 },
-    { label: 'Contributions',   icon: ClipboardCheck,  to: '/admin/contributions',    badge: pendingContribCount },
-    { label: 'Loan Approvals',  icon: BadgeDollarSign, to: '/admin/loans',            badge: pendingLoanCount },
-    { label: 'Stokvel Setup',   icon: BarChart3,       to: '/admin/stokvel-config',   badge: 0 },
-    { label: 'Borrowing Rules', icon: Settings,        to: '/admin/borrowing-config', badge: 0 },
-    { label: 'Roles',           icon: Shield,          to: '/admin/roles',            badge: 0 },
-    { label: 'Bank Interest',   icon: Landmark,        to: '/admin/bank-interest',    badge: 0 },
+    { label: 'Members',         icon: Users,           to: '/app/admin/members',          badge: 0 },
+    { label: 'Contributions',   icon: ClipboardCheck,  to: '/app/admin/contributions',    badge: pendingContribCount },
+    { label: 'Loan Approvals',  icon: BadgeDollarSign, to: '/app/admin/loans',            badge: pendingLoanCount },
+    { label: 'Stokvel Setup',   icon: BarChart3,       to: '/app/admin/stokvel-config',   badge: 0 },
+    { label: 'Borrowing Rules', icon: Settings,        to: '/app/admin/borrowing-config', badge: 0 },
+    { label: 'Roles',           icon: Shield,          to: '/app/admin/roles',            badge: 0 },
+    { label: 'Bank Interest',   icon: Landmark,        to: '/app/admin/bank-interest',    badge: 0 },
     ...(canManageStokvels
-      ? [{ label: 'Stokvels', icon: Layers, to: '/admin/stokvels', badge: 0 }]
+      ? [{ label: 'Stokvels', icon: Layers, to: '/app/admin/stokvels', badge: 0 }]
       : []),
   ];
 

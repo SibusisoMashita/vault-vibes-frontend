@@ -39,7 +39,7 @@ function deriveNotifications(
         title: buildTitle('LOAN_APPROVED'),
         message: buildMessage('LOAN_APPROVED', { amount: loan.amount }),
         timestamp: loan.dateIssued,
-        link: '/loans',
+        link: '/app/loans',
       });
       items.push({
         id: `LOAN_ISSUED:${loan.id}`,
@@ -47,7 +47,7 @@ function deriveNotifications(
         title: buildTitle('LOAN_ISSUED'),
         message: buildMessage('LOAN_ISSUED', { amount: loan.amount }),
         timestamp: loan.dateIssued,
-        link: '/loans',
+        link: '/app/loans',
       });
     }
   }
@@ -61,7 +61,7 @@ function deriveNotifications(
       title: buildTitle('DISTRIBUTION_EXECUTED'),
       message: buildMessage('DISTRIBUTION_EXECUTED', { amount: dist.amount }),
       timestamp: dist.distributedAt,
-      link: '/distributions',
+      link: '/app/distributions',
     });
   }
 
@@ -79,7 +79,7 @@ function deriveNotifications(
       title: buildTitle('CONTRIBUTION_OVERDUE'),
       message: buildMessage('CONTRIBUTION_OVERDUE', {}),
       timestamp: `${currentYM}-01T00:00:00Z`,
-      link: '/pool',
+      link: '/app/pool',
     });
   }
 

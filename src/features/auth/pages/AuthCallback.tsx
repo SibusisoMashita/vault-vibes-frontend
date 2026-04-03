@@ -35,7 +35,7 @@ export function AuthCallback() {
         if (!restored) {
           throw new Error('Session restore failed after token exchange.');
         }
-        window.location.replace('/');
+        window.location.replace('/app/dashboard');
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);

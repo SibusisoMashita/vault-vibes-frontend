@@ -71,17 +71,17 @@ function ProfileMenuItems({ onClose }: { onClose: () => void }) {
       <div className="h-px bg-border my-1" />
 
       {/* Account */}
-      <button onClick={() => go('/profile')} className={itemBase}>
+      <button onClick={() => go('/app/profile')} className={itemBase}>
         <User className="w-4 h-4" /> Profile
       </button>
-      <button onClick={() => go('/settings')} className={itemBase}>
+      <button onClick={() => go('/app/settings')} className={itemBase}>
         <Settings className="w-4 h-4" /> Account Settings
       </button>
 
       <div className="h-px bg-border my-1" />
 
       {/* Security */}
-      <button onClick={() => go('/settings')} className={itemBase}>
+      <button onClick={() => go('/app/settings')} className={itemBase}>
         <Shield className="w-4 h-4" /> Security &amp; Sessions
       </button>
 
