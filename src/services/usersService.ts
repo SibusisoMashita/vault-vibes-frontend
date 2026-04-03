@@ -17,10 +17,20 @@ interface MemberDTO {
   onboardingVersion: number;
 }
 
+interface UserDTO {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  status: string;
+  role: string;
+}
+
 function toMember(dto: MemberDTO): Member {
   return {
     id: dto.id,
     name: dto.fullName,
+    email: dto.email ?? '',
     phoneNumber: dto.phoneNumber ?? '',
     stokvelId: dto.stokvelId,
     sharesOwned: dto.sharesOwned,
@@ -35,15 +45,36 @@ function toMember(dto: MemberDTO): Member {
   };
 }
 
+function toProfile(dto: UserDTO) {
+  return {
+    id: dto.id,
+    name: dto.fullName,
+    email: dto.email ?? '',
+    phoneNumber: dto.phoneNumber ?? '',
+    role: (dto.role?.toLowerCase() as Member['role']) ?? 'member',
+    status: (dto.status as Member['status']) ?? 'ACTIVE',
+  };
+}
+
 export const UsersService = {
   getMe: async (): Promise<Member> => {
     const dto = await api.get<MemberDTO>('/users/me');
     return toMember(dto);
   },
 
+  getMember: async (id: string): Promise<Member> => {
+    const dto = await api.get<MemberDTO>(`/users/${id}`);
+    return toMember(dto);
+  },
+
   listMembers: async (): Promise<Member[]> => {
     const dtos = await api.get<MemberDTO[]>('/users');
     return dtos.map(toMember);
+  },
+
+  updateProfile: async (id: string, profile: { fullName: string; phoneNumber: string; email: string }) => {
+    const dto = await api.put<UserDTO>(`/users/${id}`, profile);
+    return toProfile(dto);
   },
 
   updateStatus: (id: string, status: string) =>
