@@ -1,3 +1,4 @@
+import vaultVibeLogo from '../../../../vaultvibe-website-material/vaultvibe-logo-mark-256.png';
 import { useAuth } from '../../../auth/AuthProvider';
 
 export function LoginPage() {
@@ -8,8 +9,12 @@ export function LoginPage() {
       <div className="w-full max-w-sm mx-4">
         {/* Logo / Brand */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/20 border border-accent/30 mb-4">
-            <span className="text-3xl">🏦</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-accent/10 border border-accent/20 mb-4 p-3">
+            <img
+              src={vaultVibeLogo}
+              alt="Vault Vibes logo"
+              className="max-h-full w-auto object-contain"
+            />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Vault Vibes</h1>
           <p className="text-slate-400 mt-2 text-sm">Members-only savings collective</p>
