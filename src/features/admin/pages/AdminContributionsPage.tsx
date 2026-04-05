@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { FileText, ImageIcon, ExternalLink, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileText, ImageIcon, ExternalLink, CheckCircle, XCircle, Clock, AlertCircle, PlusCircle } from 'lucide-react';
 import { ContributionsService, ContributionRecord } from '../../../services/contributionsService';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { useApp } from '../../../app/context/AppContext';
 import { isGroupAdmin } from '../../../auth/permissions';
+import { AdminRecordContributionModal } from '../components/AdminRecordContributionModal';
 
 type FilterStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'ALL';
 
@@ -25,18 +26,21 @@ export function AdminContributionsPage() {
   const [filter, setFilter]               = useState<FilterStatus>('PENDING');
   const [actionError, setActionError]     = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [recordModalOpen, setRecordModalOpen] = useState(false);
 
   // Reject form state per contribution id
   const [rejectOpen, setRejectOpen]   = useState<Record<string, boolean>>({});
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    let cancelled = false;
+  function fetchContributions() {
+    setLoading(true);
     ContributionsService.listRaw()
-      .then(data => { if (!cancelled) setContributions(data); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
+      .then(data => setContributions(data))
+      .catch(() => setContributions([]))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { fetchContributions(); }, []);
 
   // Page-level guard: all hooks must be called before any conditional return
   if (!isGroupAdmin(currentUser.role)) {
@@ -93,7 +97,14 @@ export function AdminContributionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Filter tabs */}
+      <AdminRecordContributionModal
+        open={recordModalOpen}
+        onClose={() => setRecordModalOpen(false)}
+        onSuccess={fetchContributions}
+      />
+
+      {/* Filter tabs + action */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex gap-2 flex-wrap">
         {(['PENDING', 'VERIFIED', 'REJECTED', 'ALL'] as FilterStatus[]).map(s => (
           <button
@@ -113,6 +124,15 @@ export function AdminContributionsPage() {
             )}
           </button>
         ))}
+      </div>
+
+        <button
+          onClick={() => setRecordModalOpen(true)}
+          className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 transition-colors shrink-0"
+        >
+          <PlusCircle className="w-4 h-4" />
+          Record Contribution
+        </button>
       </div>
 
       {/* List */}

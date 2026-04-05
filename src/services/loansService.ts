@@ -62,4 +62,10 @@ export const LoansService = {
     const dto = await api.post<LoanDTO>(`/loans/${id}/repay`, {});
     return toLoan(dto);
   },
+
+  /** Admin-only: issue a loan directly as ACTIVE on behalf of a member. */
+  issue: async (userId: string, amount: number): Promise<Loan> => {
+    const dto = await api.post<LoanDTO>('/loans/issue', { userId, amount });
+    return toLoan(dto);
+  },
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { TrendingUp, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, RefreshCw, Loader2 } from 'lucide-react';
+import { TrendingUp, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, RefreshCw, Loader2, PlusCircle } from 'lucide-react';
 import { LoansService } from '../../../services/loansService';
 import { Loan } from '../../../types';
 import { formatCurrency } from '../../../utils/currency';
@@ -8,6 +8,7 @@ import { formatDate } from '../../../utils/date';
 import { useSetPageHeader } from '../../../components/layout/useSetPageHeader';
 import { useApp } from '../../../app/context/AppContext';
 import { isGroupAdmin } from '../../../auth/permissions';
+import { AdminIssueLoanModal } from '../components/AdminIssueLoanModal';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -37,6 +38,7 @@ export function AdminLoansPage() {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [actionError, setActionError]   = useState<Record<string, string>>({});
   const [confirmAction, setConfirmAction] = useState<{ type: 'reject' | 'repay'; loan: Loan } | null>(null);
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
 
   function fetchLoans() {
     setLoading(true);
@@ -103,6 +105,11 @@ export function AdminLoansPage() {
 
   return (
     <div className="space-y-6">
+      <AdminIssueLoanModal
+        open={issueModalOpen}
+        onClose={() => setIssueModalOpen(false)}
+        onSuccess={fetchLoans}
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -162,13 +169,22 @@ export function AdminLoansPage() {
           ))}
         </div>
 
-        <button
-          onClick={fetchLoans}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-2 rounded-xl hover:bg-secondary transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIssueModalOpen(true)}
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Issue Loan
+          </button>
+          <button
+            onClick={fetchLoans}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-2 rounded-xl hover:bg-secondary transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Loan list */}

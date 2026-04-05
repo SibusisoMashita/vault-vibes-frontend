@@ -1,13 +1,14 @@
-import { Home, PieChart, Wallet, FileText, TrendingUp } from 'lucide-react';
+import { Home, PieChart, Wallet, FileText, TrendingUp, Calendar } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export function MobileNav() {
   const navItems = [
-    { label: 'Home',      icon: Home,       to: '/' },
-    { label: 'Shares',    icon: PieChart,   to: '/shares' },
-    { label: 'Pool',      icon: Wallet,     to: '/pool' },
-    { label: 'Ledger',    icon: FileText,   to: '/ledger' },
-    { label: 'Borrowing', icon: TrendingUp, to: '/loans' },
+    { label: 'Home',         icon: Home,       to: '/app/dashboard' },
+    { label: 'Shares',       icon: PieChart,   to: '/app/shares' },
+    { label: 'Pool',         icon: Wallet,     to: '/app/pool' },
+    { label: 'Ledger',       icon: FileText,   to: '/app/ledger' },
+    { label: 'Borrowing',    icon: TrendingUp, to: '/app/loans' },
+    { label: 'Distribution', icon: Calendar,   to: '/app/distributions' },
   ];
 
   return (
@@ -26,7 +27,7 @@ export function MobileNav() {
               }
             >
               <Icon className="w-5 h-5" />
-              <span className="text-xs">{item.label}</span>
+              <span className="text-[10px] leading-none text-center">{item.label}</span>
             </NavLink>
           );
         })}
